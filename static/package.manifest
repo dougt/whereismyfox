@@ -1,0 +1,10 @@
+{
+	"name": "Where Is My Fox?",
+	"icons": {
+		"128" : "http://whereismyfox.com/logos/128.png",
+		"64"  : "http://whereismyfox.com/logos/64.png"
+	},
+	"package_path": "http://whereismyfox.com/package.zip",
+	"developer": {"url": "http://whereismyfox.com", "name": "Doug Turner"},
+	"version": "1"
+}

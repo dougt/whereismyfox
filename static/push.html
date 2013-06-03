@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<script>
+  console.log("push.html loaded");
+
+  navigator.mozSetMessageHandler('push', function(e) {
+      var notification = window.navigator.mozNotification.createNotification('Push notification', 'From the Where is my phone');
+      
+      notification.onclick = function test_notificationClick() {
+          alert("Got system message! ");
+      };
+      
+      notification.show();
+  });
+
+</script> 
+</body>
+</html>

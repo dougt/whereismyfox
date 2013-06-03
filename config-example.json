@@ -1,0 +1,9 @@
+{
+  "hostname"         : "localhost",
+  "port"             : "8080",
+  "personaHostName"  : "whereismyfox.com:80",
+  "useTLS"           : false,
+  "certFilename"     : "",
+  "keyFilename"      : "",
+  "sessionCookie"    : "changeme"
+}
