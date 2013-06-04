@@ -11,6 +11,9 @@
       display: block;
     }
     </style>
+    <script>
+      var API_BASE_URL = "http://whereismyfox.com";
+    </script>
   </head>
   <body>
     <section id="setup-step1" class="setup-step">
@@ -22,7 +25,7 @@
       <script>
         function onMailVerified(assertion) {
           var xhr = new XmlHttpRequest();
-          xhr.open("POST", "/auth/login/", true);
+          xhr.open("POST", API_BASE_URL + "/auth/login/", true);
           xhr.send("assertion=" + assertion);
           xhr.onload = moveToNextStep;
           xhr.onerror = moveToErrorStep;
@@ -59,7 +62,7 @@
       <p>We now need to register this phone to Where Is My Fox, and then we'll
       be done.<p>
 
-      <form action="/device/add" method="POST">
+      <form id="register-form" method="POST">
         <label for="device-name">Device name:</label>
         <input id="device-name" type="text" name="deviceName" required>
         <input id="push-url" type="hidden" name="pushURL">
@@ -73,6 +76,9 @@
       pushRequest.onsuccess = function() {
         pushURLInput.value = pushRequest.result;
       }
+
+      var registerForm = document.getElementById("register-form");
+      registerForm.action = API_BASE_URL + "/device/add";
 
       var submitButton = document.getElementById("register-submit");
       submitButton.addEventListener("click", function(event) {
