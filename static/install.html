@@ -8,7 +8,7 @@ function load(){
     // define the manifest URL
     var manifest_url = "http://whereismyfox.com/package.manifest";
     // install the app
-    var myapp = navigator.mozApps.install(manifest_url);
+    var myapp = navigator.mozApps.installPackage(manifest_url);
     myapp.onsuccess = function(data) {
       // App is installed
     };
