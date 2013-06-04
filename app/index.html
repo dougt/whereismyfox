@@ -13,7 +13,7 @@
     </style>
   </head>
   <body>
-    <section id="setup-step1" class="setup-step active-step">
+    <section id="setup-step1" class="setup-step">
       <h1>Welcome to Where Is My Fox!</h1>
       <p>We're going to do a three-step setup so you can begin tracking your phone.</p>
       <p>First, please log-in with Persona below:</p>
@@ -110,6 +110,11 @@
     function moveToErrorStep() {
       var error = document.getElementById("setup-step" + currentStep + "-error");
       moveToStep(error);
+    }
+
+    document.body.onload = function() {
+      var current = document.getElementById("setup-step" + currentStep);
+      current.classList.add("active-step");
     }
   </script>
 </html>
