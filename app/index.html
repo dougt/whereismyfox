@@ -13,6 +13,33 @@
     </style>
     <script>
       var API_BASE_URL = "http://whereismyfox.com";
+
+      function onRequestLoaded() {
+        if (this.status === 200) {
+          moveToNextStep();
+        }
+      }
+
+      function doPOST(url, form, onload, onerror) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+
+        var param = [];
+        for (var key in form) {
+          param.push(key + "=" + form[key]);
+        }
+
+        param = param.join("&");
+
+        xhr.setRequestHeader("Connection", "close");
+        xhr.setRequestHeader("Content-length", param.length);
+        xhr.setRequestHeader("Content-type",
+                             "application/x-www-form-urlencoded");
+
+        xhr.onload = onload;
+        xhr.onerror = onerror;
+        xhr.send(param);
+      }
     </script>
   </head>
   <body>
@@ -24,11 +51,10 @@
       <button id="persona-login">Log in with Persona</button>
       <script>
         function onMailVerified(assertion) {
-          var xhr = new XmlHttpRequest();
-          xhr.open("POST", API_BASE_URL + "/auth/login/", true);
-          xhr.send("assertion=" + assertion);
-          xhr.onload = moveToNextStep;
-          xhr.onerror = moveToErrorStep;
+          doPOST(API_BASE_URL + "/auth/login",
+                 {assertion: assertion},
+                 onRequestLoaded,
+                 moveToErrorStep);
         }
 
         var loginButton = document.getElementById("persona-login");
@@ -82,13 +108,25 @@
 
       var submitButton = document.getElementById("register-submit");
       submitButton.addEventListener("click", function(event) {
+        event.preventDefault();
+
         if (!pushURLInput.value) {
-          event.preventDefault();
           moveToErrorStep();
           return;
         }
 
-        moveToNextStep();
+        /* FIXME The form fails to be parsed on the server
+         * for some reason, so send it manually here for now.
+         */
+        var form = {
+          deviceName: document.getElementById("device-name").value,
+          pushURL: pushURLInput.value
+        };
+
+        doPOST(API_BASE_URL + "/device/add",
+               form,
+               onRequestLoaded,
+               moveToErrorStep);
       });
     </script>
     <section id="setup-step4" class="setup-step">
