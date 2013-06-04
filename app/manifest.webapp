@@ -5,7 +5,7 @@
 		"128" : "http://whereismyfox.com/logos/128.png",
 		"64"  : "http://whereismyfox.com/logos/64.png"
 	},
-	"launch_path": "/index.html",
+	"launch_path": "/app.html",
 	"developer": {"url": "http://whereismyfox.com", "name": "Where Is My Fox"},
 	"permissions": {
 		"desktop-notification":{},
