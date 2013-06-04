@@ -1,0 +1,115 @@
+<html>
+  <head>
+    <title>WhereIsMyFox</title>
+    <script src="https://login.persona.org/include.js"></script>
+    <style>
+    .setup-step {
+      display: none;
+    }
+
+    .active-step {
+      display: block;
+    }
+    </style>
+  </head>
+  <body>
+    <section id="setup-step1" class="setup-step active-step">
+      <h1>Welcome to Where Is My Fox!</h1>
+      <p>We're going to do a three-step setup so you can begin tracking your phone.</p>
+      <p>First, please log-in with Persona below:</p>
+
+      <button id="persona-login">Log in with Persona</button>
+      <script>
+        function onMailVerified(assertion) {
+          var xhr = new XmlHttpRequest();
+          xhr.open("POST", "/auth/login/", true);
+          xhr.send("assertion=" + assertion);
+          xhr.onload = moveToNextStep;
+          xhr.onerror = moveToErrorStep;
+        }
+
+        var loginButton = document.getElementById("persona-login");
+        loginButton.addEventListener("click", function() {
+          navigator.id.get(onMailVerified);
+        });
+      </script>
+    </section>
+    <section id="setup-step2" class="setup-step">
+      <h1>Configure Geolocation (Step 2/3)</h1>
+      <p>Those were some impressive login skills!</p>
+      <p>Now it's time to configure Geolocation. Once you start the configuration
+      step below, we will ask you for your location.</p>
+      <p>Please remember to select <strong>Always share location</strong>
+      in the permission dialog so Where Is My Fox can always keep an eye on this
+      phone!</p>
+
+      <button id="begin-geo-config">Configure Geolocation</button>
+      <script>
+        var geoConfigButton = document.getElementById("begin-geo-config");
+        geoConfigButton.addEventListener("click", function() {
+          navigator.geolocation.getCurrentPosition(moveToNextStep,
+                                                   moveToErrorStep,
+                                                   {maximumAge: 0});
+        });
+      </script>
+    </section>
+    <section id="setup-step3" class="setup-step">
+      <h1>Register to Where Is My Fox (Step 3/3)</h1>
+      <p>Your phone has demonstrated an exceptional sense of location!</p>
+      <p>We now need to register this phone to Where Is My Fox, and then we'll
+      be done.<p>
+
+      <form action="/device/add" method="POST">
+        <label for="device-name">Device name:</label>
+        <input id="device-name" type="text" name="deviceName" required>
+        <input id="push-url" type="hidden" name="pushURL">
+        <input id="register-submit" type="submit" value="Register!">
+      </form>
+    </section>
+    <script>
+      var pushRequest = navigator.push.register();
+      var pushURLInput = document.getElementById("push-url");
+
+      pushRequest.onsuccess = function() {
+        pushURLInput.value = pushRequest.result;
+      }
+
+      var submitButton = document.getElementById("register-submit");
+      submitButton.addEventListener("click", function(event) {
+        if (!pushURLInput.value) {
+          event.preventDefault();
+          moveToErrorStep();
+          return;
+        }
+
+        moveToNextStep();
+      });
+    </script>
+    <section id="setup-step4" class="setup-step">
+      <h1>All done!</h1>
+      <p>Your phone should now be ready to be tracked.</p>
+      <p>Feel free to visit the <a href=http://whereismyfox.com>Where Is My
+        Fox</a> main page to make sure everything worked!</p>
+  </body>
+  <script>
+    var currentStep = 1;
+
+    function moveToStep(next) {
+      var current = document.getElementById("setup-step" + currentStep);
+
+      current.classList.remove("active-step");
+      next.classList.add("active-step");
+    }
+
+    function moveToNextStep() {
+      var next = document.getElementById("setup-step" + (currentStep + 1));
+      moveToStep(next);
+      currentStep++;
+    }
+
+    function moveToErrorStep() {
+      var error = document.getElementById("setup-step" + currentStep + "-error");
+      moveToStep(error);
+    }
+  </script>
+</html>

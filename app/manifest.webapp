@@ -1,0 +1,16 @@
+{
+	"name": "Where Is My Fox?",
+	"icons": {
+		"128" : "http://whereismyfox.com/logos/128.png",
+		"64"  : "http://whereismyfox.com/logos/64.png"
+	},
+        "launch_path": "/index.html",
+	"developer": {"url": "http://whereismyfox.com", "name": "Where Is My Fox"},
+	"permissions": {
+		"desktop-notification":{},
+		"push":{},
+		"geolocation":{}
+	},
+	"messages": [{ "push": "/index.html" }],
+	"version": "1"
+}

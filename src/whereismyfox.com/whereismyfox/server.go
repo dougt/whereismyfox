@@ -197,13 +197,13 @@ func main() {
 	serveSingle("/index.html",      "./static/index.html")
 	serveSingle("/install.html",    "./static/install.html")
 	serveSingle("/push.html",       "./static/push.html")
-	serveSingle("/manifest.webapp", "./static/manifest.webapp")
+	serveSingle("/manifest.webapp", "./app/manifest.webapp")
 	serveSingle("/style.css",       "./static/style.css")
 	serveSingle("/logos/64.png",    "./static/logos/64.png")
 	serveSingle("/logos/128.png",   "./static/logos/128.png")
 
 	serveSingle("/package.manifest",   "./static/package.manifest")
-	serveSingle("/package.zip",        "./static/package.zip")
+	serveSingle("/package.zip",        "./app/package.zip")
 
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
