@@ -40,6 +40,28 @@
         xhr.onerror = onerror;
         xhr.send(param);
       }
+
+      navigator.mozSetMessageHandler("push", function(message) {
+        console.log("Got push notification!");
+
+        navigator.geolocation.watchPosition(
+          function(position) {
+            console.log(
+              "Updating location to (" +
+              position.coords.latitude + ", " +
+              position.coords.longitude + ")"
+            );
+
+            doPOST(
+              API_BASE_URL + "/device/update/",
+              {
+                "pushURL": message.pushEndpoint,
+                "lat": position.coords.latitude,
+                "lon": position.coords.longitude
+              }, null, null);
+          }
+        );
+      });
     </script>
   </head>
   <body>

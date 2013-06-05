@@ -2,9 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type DeviceInformation struct {
@@ -168,6 +171,52 @@ func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func deviceLostHandler(w http.ResponseWriter, r *http.Request) {
+	if !IsLoggedIn(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("."))
+		return
+	}
+
+	// check that this device is actually owned by the user
+	email := GetLoginName(r)
+	if email == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("."))
+		return
+	}
+
+	var lostDevice DeviceInformation
+	devices := devicesForUser(email)
+	for _, device := range devices {
+		if device.PushURL == r.FormValue("pushURL") {
+			lostDevice = device
+			break
+		}
+	}
+
+	if lostDevice.PushURL == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Push endpoint doesn't correspond to any device!"))
+	}
+
+	body := fmt.Sprintf("version=%d", uint64(time.Now().Unix()))
+	request, err := http.NewRequest("PUT", lostDevice.PushURL, strings.NewReader(body))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to PUT to endpoint!"))
+	}
+
+	request.Header["Content-Type"] = []string{"application/x-www-form-urlencoded"}
+
+	var client http.Client
+	_, err = client.Do(request)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to PUT to endpoint"))
+	}
+}
+
 func serveSingle(pattern string, filename string) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		log.Println("serving file " + filename);
@@ -181,6 +230,7 @@ func main() {
 	openDb()
 
 	http.HandleFunc("/device/update/", deviceLocationHandler)
+	http.HandleFunc("/device/lost/", deviceLostHandler)
 
 	// device management
 	http.HandleFunc("/device/list", deviceListHandler)
