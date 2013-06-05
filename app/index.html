@@ -88,7 +88,7 @@
       <p>We now need to register this phone to Where Is My Fox, and then we'll
       be done.<p>
 
-      <form id="register-form" method="POST">
+      <form id="register-form" action="/device/add/" method="POST">
         <label for="device-name">Device name:</label>
         <input id="device-name" type="text" name="deviceName" required>
         <input id="push-url" type="hidden" name="pushURL">
@@ -103,30 +103,13 @@
         pushURLInput.value = pushRequest.result;
       }
 
-      var registerForm = document.getElementById("register-form");
-      registerForm.action = API_BASE_URL + "/device/add";
-
       var submitButton = document.getElementById("register-submit");
       submitButton.addEventListener("click", function(event) {
-        event.preventDefault();
-
         if (!pushURLInput.value) {
+          event.preventDefault();
           moveToErrorStep();
           return;
         }
-
-        /* FIXME The form fails to be parsed on the server
-         * for some reason, so send it manually here for now.
-         */
-        var form = {
-          deviceName: document.getElementById("device-name").value,
-          pushURL: pushURLInput.value
-        };
-
-        doPOST(API_BASE_URL + "/device/add",
-               form,
-               onRequestLoaded,
-               moveToErrorStep);
       });
     </script>
     <section id="setup-step4" class="setup-step">
