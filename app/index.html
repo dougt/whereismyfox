@@ -73,7 +73,7 @@
       <button id="persona-login">Log in with Persona</button>
       <script>
         function onMailVerified(assertion) {
-          doPOST(API_BASE_URL + "/auth/login",
+          doPOST(API_BASE_URL + "/auth/applogin",
                  {assertion: assertion},
                  onRequestLoaded,
                  moveToErrorStep);

@@ -238,9 +238,10 @@ func main() {
 	http.HandleFunc("/device/delete/", deviceDeleteHandler)
 
 	// personas
-	http.HandleFunc("/auth/check", loginCheckHandler)
-	http.HandleFunc("/auth/login", loginHandler)
-	http.HandleFunc("/auth/logout", logoutHandler)
+	http.HandleFunc("/auth/check",    loginCheckHandler)
+	http.HandleFunc("/auth/login",    loginHandler)
+	http.HandleFunc("/auth/applogin", appLoginHandler)
+	http.HandleFunc("/auth/logout",   logoutHandler)
 
 
 	serveSingle("/",                "./static/index.html")
