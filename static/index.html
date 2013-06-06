@@ -30,6 +30,8 @@
             console.log("PUT failed: " + err);
           }
         });
+
+        setInterval(updateDevices, 5000);
       }
 
       function updateDevices() {
@@ -43,7 +45,8 @@
 
                var result = JSON.parse(r)
                $.each(result.Devices, function(key, value){
-                   $("#devices").append("<div class='devices'>" + value.DeviceName);
+                   var deviceRow = value.DeviceName + " (" + value.Latitude + ", " + value.Longitude + ")";
+                   $("#devices").append("<div class='devices'>" + deviceRow);
                    $("#devices").append("<button type='button' onClick='unregister(\"" + value.PushURL + "\")''>Unregister</button>");
                    $("#devices").append("<button type='button' onClick='whereIsIt(\"" + value.PushURL + "\");'>Where is it?</button>");
                    $("#devices").append("</div>");

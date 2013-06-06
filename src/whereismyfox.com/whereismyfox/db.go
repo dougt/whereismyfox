@@ -72,7 +72,7 @@ func deleteDevice(pushURL string) bool {
 
 func devicesForUser(email string) []DeviceInformation {
 
-	selectStmt, err := gConn.Prepare("SELECT deviceName, pushURL FROM devices WHERE email='" + email + "';")
+	selectStmt, err := gConn.Prepare("SELECT deviceName, pushURL, lat, lon FROM devices WHERE email='" + email + "';")
 	if err != nil {
 		log.Fatalf("Error while preparing select: %s", err)
 		return nil
@@ -89,12 +89,13 @@ func devicesForUser(email string) []DeviceInformation {
 	for selectStmt.Next() {
 		var deviceName = ""
 		var pushURL = ""
-		err = selectStmt.Scan(&deviceName, &pushURL)
+		var latitude, longitude float64
+		err = selectStmt.Scan(&deviceName, &pushURL, &latitude, &longitude)
 		if err != nil {
 			log.Fatalf("Error while getting row data: %s", err)
 			return nil
 		}
-		info := DeviceInformation{deviceName, pushURL}
+		info := DeviceInformation{deviceName, pushURL, latitude, longitude}
 		result = append(result, info)
 	}
 

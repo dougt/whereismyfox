@@ -13,6 +13,8 @@ import (
 type DeviceInformation struct {
 	DeviceName string `json: "name"`
 	PushURL    string `json: "pushURL"`
+	Latitude   float64 `json: "latitude"`
+	Longitude  float64 `json: "longitude"`
 }
 
 type DeviceListResponse struct {
