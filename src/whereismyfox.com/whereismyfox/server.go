@@ -99,7 +99,23 @@ func deviceAddHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if addDevice(loginName, deviceName, pushURL) {
+	latitude := r.FormValue("latitude")
+	_, err = strconv.ParseFloat(latitude, 64)
+	if err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("Bad Request."))
+		return
+	}
+
+	longitude := r.FormValue("longitude")
+	_, err = strconv.ParseFloat(longitude, 64)
+	if err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("Bad Request."))
+		return
+	}
+
+	if addDevice(loginName, deviceName, pushURL, latitude, longitude) {
 		w.Write([]byte("ok"))
 		return
 	}

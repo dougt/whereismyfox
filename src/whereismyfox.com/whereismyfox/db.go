@@ -39,7 +39,7 @@ func updateDeviceLocation(pushURL string, lat float64, lon float64) bool {
 	return true
 }
 
-func addDevice(email string, deviceName string, pushURL string) bool {
+func addDevice(email, deviceName, pushURL, latitude, longitude string) bool {
 
 	if email == "" || deviceName == "" || pushURL == "" {
 		return false
@@ -48,7 +48,9 @@ func addDevice(email string, deviceName string, pushURL string) bool {
 	log.Println("adding new device: " + deviceName + " to db for user: " + email)
 	now := strconv.FormatInt(time.Now().Unix(), 10)
 
-	insertString := "INSERT INTO devices(date, email, deviceName, pushURL) VALUES('" + now + "', '" + email + "', '" + deviceName + "', '" + pushURL + "')"
+	insertString := "INSERT INTO devices(date, email, deviceName, pushURL, lon, lat) VALUES('" +
+		now + "', '" + email + "', '" + deviceName + "', '" + pushURL + "', '" + longitude + "', '" +
+		latitude + "')"
 
 	err := gConn.Exec(insertString)
 	if err != nil {

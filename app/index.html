@@ -134,9 +134,16 @@
       <script>
         var geoConfigButton = document.getElementById("begin-geo-config");
         geoConfigButton.addEventListener("click", function() {
-          navigator.geolocation.getCurrentPosition(moveToNextStep,
-                                                   moveToErrorStep,
-                                                   {maximumAge: 0});
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              var latitude = document.getElementById("latitude");
+              latitude.value = position.coords.latitude;
+
+              var longitude = document.getElementById("longitude");
+              longitude.value = position.coords.longitude;
+
+              moveToNextStep();
+            }, moveToErrorStep, {maximumAge: 0});
         });
       </script>
     </section>
@@ -150,6 +157,8 @@
         <label for="device-name">Device name:</label>
         <input id="device-name" type="text" name="deviceName" required>
         <input id="push-url" type="hidden" name="pushURL">
+        <input id="latitude" type="hidden" name="latitude">
+        <input id="longitude" type="hidden" name="longitude">
         <button id="register-submit" type="submit">Register!</button>
       </form>
     </section>
