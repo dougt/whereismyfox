@@ -244,15 +244,16 @@ func main() {
 	http.HandleFunc("/auth/logout",   logoutHandler)
 
 
-	serveSingle("/",                "./static/index.html")
-	serveSingle("/index.html",      "./static/index.html")
-	serveSingle("/install.html",    "./static/install.html")
-	serveSingle("/push.html",       "./static/push.html")
-	serveSingle("/app.html",        "./app/index.html")
-	serveSingle("/manifest.webapp", "./app/manifest.webapp")
-	serveSingle("/style.css",       "./static/style.css")
-	serveSingle("/logos/64.png",    "./static/logos/64.png")
-	serveSingle("/logos/128.png",   "./static/logos/128.png")
+	serveSingle("/",                      "./static/index.html")
+	serveSingle("/index.html",            "./static/index.html")
+	serveSingle("/install.html",          "./static/install.html")
+	serveSingle("/push.html",             "./static/push.html")
+	serveSingle("/app.html",              "./app/index.html")
+	serveSingle("/manifest.webapp",       "./app/manifest.webapp")
+	serveSingle("/style.css",             "./static/style.css")
+	serveSingle("/logos/64.png",          "./static/logos/64.png")
+	serveSingle("/logos/128.png",         "./static/logos/128.png")
+	serveSingle("/img/persona-login.png", "./static/img/persona_sign_in_black.png")
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 

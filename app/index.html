@@ -3,12 +3,46 @@
     <title>WhereIsMyFox</title>
     <script src="https://login.persona.org/include.js"></script>
     <style>
+    html, body {
+      margin: 0;
+      padding: 10px;
+      font-family: Lucida Grande, sans-serif;
+    }
+
+    body {
+      background-color: #E79910;
+    }
+
+    h1 {
+      font-weight: bolder;
+      font-size: xx-large;
+      margin: auto;
+      width: 300px;
+      color: white;
+    }
+
+    button {
+      height: 25px;
+      width: 185px;
+      margin: 10px 20px;
+      background-color: #414141;
+      border: none;
+      border-radius: 3px;
+      color: white;
+      font-weight: bold;
+    }
+
     .setup-step {
       display: none;
     }
 
     .active-step {
       display: block;
+    }
+
+    #persona-login {
+      border: none;
+      background: transparent;
     }
     </style>
     <script>
@@ -70,7 +104,9 @@
       <p>We're going to do a three-step setup so you can begin tracking your phone.</p>
       <p>First, please log-in with Persona below:</p>
 
-      <button id="persona-login">Log in with Persona</button>
+      <button id="persona-login">
+        <img src="/img/persona-login.png"/>
+      </button>
       <script>
         function onMailVerified(assertion) {
           doPOST(API_BASE_URL + "/auth/applogin",
@@ -86,7 +122,7 @@
       </script>
     </section>
     <section id="setup-step2" class="setup-step">
-      <h1>Configure Geolocation (Step 2/3)</h1>
+      <h1>Configure Geolocation</h1>
       <p>Those were some impressive login skills!</p>
       <p>Now it's time to configure Geolocation. Once you start the configuration
       step below, we will ask you for your location.</p>
@@ -105,7 +141,7 @@
       </script>
     </section>
     <section id="setup-step3" class="setup-step">
-      <h1>Register to Where Is My Fox (Step 3/3)</h1>
+      <h1>Registration</h1>
       <p>Your phone has demonstrated an exceptional sense of location!</p>
       <p>We now need to register this phone to Where Is My Fox, and then we'll
       be done.<p>
@@ -114,7 +150,7 @@
         <label for="device-name">Device name:</label>
         <input id="device-name" type="text" name="deviceName" required>
         <input id="push-url" type="hidden" name="pushURL">
-        <input id="register-submit" type="submit" value="Register!">
+        <button id="register-submit" type="submit">Register!</button>
       </form>
     </section>
     <script>
