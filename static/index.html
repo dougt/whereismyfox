@@ -6,6 +6,7 @@
 
     <script src="https://login.persona.org/include.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="/lib/mustache.js"></script>
 
     <script>
       function unregister(pushURL) {
@@ -34,29 +35,58 @@
         setInterval(updateDevices, 5000);
       }
 
+      function renderDeviceTable(devices) {
+        var template = "                                                 \
+          <tr>                                                           \
+            <th>Device Name</th>                                         \
+            <th>Last coordinates</th>                                    \
+          </tr>                                                          \
+          {{#devices}}                                                   \
+            <tr>                                                         \
+              <td>{{DeviceName}}</td>                                    \
+              <td>({{Latitude}}, {{Longitude}})</td>                     \
+              <td>                                                       \
+                <button onclick=whereIsIt(\"{{PushURL}}\")>              \
+                  Where is it?                                           \
+                </button>                                                \
+              </td>                                                      \
+              <td>                                                       \
+                <button onclick=unregister(\"{{PushURL}}\")>             \
+                  Unregister                                             \
+                </button>                                                \
+              </td>                                                      \
+            </tr>                                                        \
+          {{/devices}}                                                   \
+          {{#empty}}                                                     \
+            <tr><td>No devices found!</td></tr>                          \
+          {{/empty}}                                                     \
+        ";
+
+        if (devices.length) {
+          devices[0].first = true;
+        }
+
+        var table = Mustache.render(template, {
+          devices: devices,
+          empty: !devices.length
+        });
+
+        $("#devices").html(table);
+      }
+
       function updateDevices() {
         $("#devices").html("<div> Fetching list.. </div>");
         $.ajax({
-              type: 'GET',
-              url: '/device/list',
-              success: function(r) {
-
-              $("#devices").html("");
-
-               var result = JSON.parse(r)
-               $.each(result.Devices, function(key, value){
-                   var deviceRow = value.DeviceName + " (" + value.Latitude + ", " + value.Longitude + ")";
-                   $("#devices").append("<div class='devices'>" + deviceRow);
-                   $("#devices").append("<button type='button' onClick='unregister(\"" + value.PushURL + "\")''>Unregister</button>");
-                   $("#devices").append("<button type='button' onClick='whereIsIt(\"" + value.PushURL + "\");'>Where is it?</button>");
-                   $("#devices").append("</div>");
-               });
-
-            },
-            error: function(xhr, status, err) {
-              $("#devices").html("<div> </div>");
-            }
-          });
+          type: 'GET',
+          url: '/device/list',
+          success: function(r) {
+            var result = JSON.parse(r)
+            renderDeviceTable(result.Devices);
+          },
+          error: function(xhr, status, err) {
+            $("#devices").html("Failed to fetch your devices!");
+          }
+        });
       }
 
       $("document").ready(function(){
@@ -116,12 +146,10 @@
 
   <body>
     <h1 id="title">Where Is My Fox?</h1>
+    <table id="devices"></table>
     <div>
         <button id="login">login</button>
         <button id="logout">logout</button>
     </div>
-    <div id="devices">
-    </div>
-
   </body>
 </html>
