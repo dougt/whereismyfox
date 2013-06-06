@@ -155,6 +155,7 @@ func deviceDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("device location handler!")
 
 	if !IsLoggedIn(r) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -172,6 +173,7 @@ func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
 
 	lat, err1 := strconv.ParseFloat(r.FormValue("lat"), 64)
 	lon, err2 := strconv.ParseFloat(r.FormValue("lon"), 64)
+	log.Println("Got coordinates ", lat, lon)
 
 	if err1 != nil || err2 != nil || pushURL == "" {
 		w.WriteHeader(400)
@@ -269,6 +271,8 @@ func main() {
 	serveSingle("/app.html",              "./app/index.html")
 	serveSingle("/manifest.webapp",       "./app/manifest.webapp")
 	serveSingle("/style.css",             "./static/style.css")
+	serveSingle("/style-app.css",         "./static/style-app.css")
+	serveSingle("/style-common.css",      "./static/style-common.css")
 	serveSingle("/logos/64.png",          "./static/logos/64.png")
 	serveSingle("/logos/128.png",         "./static/logos/128.png")
 	serveSingle("/img/persona-login.png", "./static/img/persona_sign_in_black.png")

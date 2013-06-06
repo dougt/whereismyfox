@@ -2,49 +2,8 @@
   <head>
     <title>WhereIsMyFox</title>
     <script src="https://login.persona.org/include.js"></script>
-    <style>
-    html, body {
-      margin: 0;
-      padding: 10px;
-      font-family: Lucida Grande, sans-serif;
-    }
-
-    body {
-      background-color: #E79910;
-    }
-
-    h1 {
-      font-weight: bolder;
-      font-size: xx-large;
-      margin: auto;
-      width: 300px;
-      color: white;
-    }
-
-    button {
-      height: 25px;
-      width: 185px;
-      margin: 10px 20px;
-      background-color: #414141;
-      border: none;
-      border-radius: 3px;
-      color: white;
-      font-weight: bold;
-    }
-
-    .setup-step {
-      display: none;
-    }
-
-    .active-step {
-      display: block;
-    }
-
-    #persona-login {
-      border: none;
-      background: transparent;
-    }
-    </style>
+    <link rel="stylesheet" type="text/css" href="style-common.css">
+    <link rel="stylesheet" type="text/css" href="style-app.css">
     <script>
       var API_BASE_URL = "http://whereismyfox.com";
 
@@ -105,7 +64,7 @@
       <p>First, please log-in with Persona below:</p>
 
       <button id="persona-login">
-        <img src="/img/persona-login.png"/>
+        <div></div>
       </button>
       <script>
         function onMailVerified(assertion) {
@@ -136,6 +95,7 @@
         geoConfigButton.addEventListener("click", function() {
           navigator.geolocation.getCurrentPosition(
             function(position) {
+              console.log(position.coords.latitude);
               var latitude = document.getElementById("latitude");
               latitude.value = position.coords.latitude;
 

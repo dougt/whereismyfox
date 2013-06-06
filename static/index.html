@@ -2,6 +2,7 @@
   <head>
     <title>WhereIsMyFox</title>
 
+    <link rel="stylesheet" type="text/css" href="style-common.css">
     <link rel="stylesheet" type="text/css" href="style.css">
 
     <script src="https://login.persona.org/include.js"></script>
@@ -37,11 +38,13 @@
 
       function renderDeviceTable(devices) {
         var template = "                                                 \
+          {{#devices}}                                                   \
+          {{#first}}                                                     \
           <tr>                                                           \
-            <th>Device Name</th>                                         \
+            <th>Device name</th>                                         \
             <th>Last coordinates</th>                                    \
           </tr>                                                          \
-          {{#devices}}                                                   \
+          {{/first}}                                                     \
             <tr>                                                         \
               <td>{{DeviceName}}</td>                                    \
               <td>({{Latitude}}, {{Longitude}})</td>                     \
@@ -75,7 +78,7 @@
       }
 
       function updateDevices() {
-        $("#devices").html("<div> Fetching list.. </div>");
+        $("#devices").html("Fetching list...");
         $.ajax({
           type: 'GET',
           url: '/device/list',
@@ -91,29 +94,29 @@
 
       $("document").ready(function(){
 
-          $("#logout").hide();
+          $("#persona-logout").hide();
           $("#devices").hide();
 
           function loggedIn(email){
-            $("#login").hide();
-            $("#logout").show();
+            $("#persona-login").hide();
+            $("#persona-logout").show();
 
             $("#devices").show();
             updateDevices();
           }
 
           function loggedOut(){
-            $("#logout").hide();
-            $("#login").show();
+            $("#persona-logout").hide();
+            $("#persona-login").show();
             $("#devices").hide();
           }
 
-          $("#login").on("click", function(e) {
+          $("#persona-login").on("click", function(e) {
               e.preventDefault();
               navigator.id.get(mailVerified);
           });
 
-          $("#logout").on("click", function(e) {
+          $("#persona-logout").on("click", function(e) {
               e.preventDefault();
               $.get('/auth/logout', loggedOut);
           });
@@ -147,9 +150,7 @@
   <body>
     <h1 id="title">Where Is My Fox?</h1>
     <table id="devices"></table>
-    <div>
-        <button id="login">login</button>
-        <button id="logout">logout</button>
-    </div>
+    <button id="persona-login"><div></div></button>
+    <button id="persona-logout">Logout</button>
   </body>
 </html>

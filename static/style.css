@@ -1,8 +1,13 @@
+h1 {
+  margin-bottom: 30px;
+}
+
 #devices {
-  width: 500px;
   margin: auto;
 }
 
 #devices td {
   text-align: center;
+  white-space: nowrap;
+  padding: 5px 10px;
 }
