@@ -269,7 +269,6 @@ func main() {
 	serveSingle("/install.html",          "./static/install.html")
 	serveSingle("/push.html",             "./static/push.html")
 	serveSingle("/app.html",              "./app/index.html")
-	serveSingle("/manifest.webapp",       "./app/manifest.webapp")
 	serveSingle("/style.css",             "./static/style.css")
 	serveSingle("/style-app.css",         "./static/style-app.css")
 	serveSingle("/style-common.css",      "./static/style-common.css")
@@ -277,6 +276,14 @@ func main() {
 	serveSingle("/logos/128.png",         "./static/logos/128.png")
 	serveSingle("/img/persona-login.png", "./static/img/persona_sign_in_black.png")
 	serveSingle("/lib/mustache.js",       "./static/lib/mustache.js")
+
+	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
+		filename := "./app/manifest.webapp"
+		log.Println("serving manifest from " + filename);
+
+		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
+		http.ServeFile(w, r, filename)
+	})
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 
