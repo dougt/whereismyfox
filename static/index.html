@@ -23,6 +23,7 @@
           });
       }
 
+      var tracking = false;
       function whereIsIt(pushURL) {
         $.ajax({
           type: 'POST',
@@ -33,7 +34,10 @@
           }
         });
 
-        setInterval(updateDevices, 5000);
+        if (!tracking) {
+          tracking = true;
+          setInterval(updateDevices, 5000);
+        }
       }
 
       function renderDeviceTable(devices) {
