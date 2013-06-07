@@ -28,8 +28,8 @@ func updateDeviceLocation(pushURL string, lat float64, lon float64) bool {
 
 	err := gConn.Exec("UPDATE devices SET date=" +
 		strconv.FormatInt(time.Now().Unix(), 10) +
-		", lat=" + strconv.FormatFloat(lon, 'f', 4, 64) +
-		", lon=" + strconv.FormatFloat(lat, 'f', 4, 64) +
+		", lat=" + strconv.FormatFloat(lat, 'f', 4, 64) +
+		", lon=" + strconv.FormatFloat(lon, 'f', 4, 64) +
 		" WHERE pushURL='" + pushURL + "'")
 
 	if err != nil {
