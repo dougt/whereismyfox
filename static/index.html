@@ -47,7 +47,12 @@
           {{/first}}                                                     \
             <tr>                                                         \
               <td>{{DeviceName}}</td>                                    \
-              <td>({{Latitude}}, {{Longitude}})</td>                     \
+              <td>                                                       \
+                <a href={{mapsURL}}{{Latitude}},{{Longitude}}            \
+                   target=_blank>                                        \
+                  ({{Latitude}}, {{Longitude}})                          \
+                </a>                                                     \
+              </td>                                                      \
               <td>                                                       \
                 <button onclick=whereIsIt(\"{{PushURL}}\")>              \
                   Where is it?                                           \
@@ -71,7 +76,8 @@
 
         var table = Mustache.render(template, {
           devices: devices,
-          empty: !devices.length
+          empty: !devices.length,
+          mapsURL: "https://maps.google.com/maps?q="
         });
 
         $("#devices").html(table);
