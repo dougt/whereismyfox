@@ -1,4 +1,0 @@
-when app is uninstalled, we shoudl delete the device registeration?
-prevent empty names from being reigster.
-figure out why push notifications are not working in the app
-remember the login creditials in local storage so that we don't have to re-request every startup
