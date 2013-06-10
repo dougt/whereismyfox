@@ -28,8 +28,8 @@ func updateDeviceLocation(pushURL string, lat float64, lon float64) bool {
 
 	err := gConn.Exec("UPDATE devices SET date=" +
 		strconv.FormatInt(time.Now().Unix(), 10) +
-		", lat=" + strconv.FormatFloat(lon, 'f', 4, 64) +
-		", lon=" + strconv.FormatFloat(lat, 'f', 4, 64) +
+		", lat=" + strconv.FormatFloat(lat, 'f', 4, 64) +
+		", lon=" + strconv.FormatFloat(lon, 'f', 4, 64) +
 		" WHERE pushURL='" + pushURL + "'")
 
 	if err != nil {
@@ -39,7 +39,7 @@ func updateDeviceLocation(pushURL string, lat float64, lon float64) bool {
 	return true
 }
 
-func addDevice(email string, deviceName string, pushURL string) bool {
+func addDevice(email, deviceName, pushURL, latitude, longitude string) bool {
 
 	if email == "" || deviceName == "" || pushURL == "" {
 		return false
@@ -48,7 +48,9 @@ func addDevice(email string, deviceName string, pushURL string) bool {
 	log.Println("adding new device: " + deviceName + " to db for user: " + email)
 	now := strconv.FormatInt(time.Now().Unix(), 10)
 
-	insertString := "INSERT INTO devices(date, email, deviceName, pushURL) VALUES('" + now + "', '" + email + "', '" + deviceName + "', '" + pushURL + "')"
+	insertString := "INSERT INTO devices(date, email, deviceName, pushURL, lon, lat) VALUES('" +
+		now + "', '" + email + "', '" + deviceName + "', '" + pushURL + "', '" + longitude + "', '" +
+		latitude + "')"
 
 	err := gConn.Exec(insertString)
 	if err != nil {
@@ -72,7 +74,7 @@ func deleteDevice(pushURL string) bool {
 
 func devicesForUser(email string) []DeviceInformation {
 
-	selectStmt, err := gConn.Prepare("SELECT deviceName, pushURL FROM devices WHERE email='" + email + "';")
+	selectStmt, err := gConn.Prepare("SELECT deviceName, pushURL, lat, lon FROM devices WHERE email='" + email + "';")
 	if err != nil {
 		log.Fatalf("Error while preparing select: %s", err)
 		return nil
@@ -89,12 +91,13 @@ func devicesForUser(email string) []DeviceInformation {
 	for selectStmt.Next() {
 		var deviceName = ""
 		var pushURL = ""
-		err = selectStmt.Scan(&deviceName, &pushURL)
+		var latitude, longitude float64
+		err = selectStmt.Scan(&deviceName, &pushURL, &latitude, &longitude)
 		if err != nil {
 			log.Fatalf("Error while getting row data: %s", err)
 			return nil
 		}
-		info := DeviceInformation{deviceName, pushURL}
+		info := DeviceInformation{deviceName, pushURL, latitude, longitude}
 		result = append(result, info)
 	}
 

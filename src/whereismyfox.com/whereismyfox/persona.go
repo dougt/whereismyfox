@@ -59,7 +59,15 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+func appLoginHandler(w http.ResponseWriter, r *http.Request) {
+	doLogin("https://firefoxos.persona.org/verify", w, r)
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+	doLogin("https://verifier.login.persona.org/verify", w, r)
+}
+
+func doLogin(verifierURL string, w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(400)
@@ -76,8 +84,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := url.Values{"assertion": {assertion}, "audience": {"http://" + gServerConfig.PersonaName }}
 
-//	resp, err := http.PostForm("https://verifier.login.persona.org/verify", data)
-	resp, err := http.PostForm("https://firefoxos.persona.org/verify", data)
+	resp, err := http.PostForm(verifierURL, data)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(400)

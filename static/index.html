@@ -1,78 +1,15 @@
 <html>
   <head>
-    <title>WhereIsMyFox</title>    
+    <title>WhereIsMyFox</title>
 
+    <link rel="stylesheet" type="text/css" href="style-common.css">
     <link rel="stylesheet" type="text/css" href="style.css">
 
     <script src="https://login.persona.org/include.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="/lib/mustache.js"></script>
 
     <script>
-
-     // this should move to push.html when bug https://bugzil.la/800431 is fixed.
-     if (navigator.mozSetMessageHandler) {
-         navigator.mozSetMessageHandler('push', function(e) {
-             // some how -- i need the pushURL for this particual guy.
-// it might make sense at this point, to create an appl that only does what I need here.
-// that is registers for ONLY one push request
-// does the geolocation request (and allow).
-// has a prettier interface.
-
-// then the website can be very specific -- list the devices, and force and update
-// no registerations on that site.
-
-
-             function handlePosition(position) {
-                 updateLocation(pushURL,
-                                position.coords.latitude,
-                                position.coords.longitude);
-             }
-             function handleError(error) {
-                 updateLocation(pushURL,
-                                -1,
-                                -1);
-             }
-
-             var options = {
-                 enableHighAccuracy: true,
-                 timeout: 10000,
-                 maximumAge: 0
-             };
-             
-             navigator.geolocation.watchPosition(handlePosition, handleError, options);
-         });
-     }
-
-      function updateLocation(pushURL) {
-        var time = Date.now();
-        $.ajax({
-              type: 'GET',
-              url: pushURL,
-              data: {version: time},
-              success: function(res, status, xhr) {
-                updateDevices();
-              },
-              error: function(xhr, status, err) {
-              }
-          });
-      }
-
-      function register(deviceName, pushURL) {
-
-        alert("registering " + deviceName);
-
-        $.ajax({
-              type: 'GET',
-              url: '/device/add/',
-              data: {deviceName: deviceName, pushURL: pushURL},
-              success: function(res, status, xhr) {
-                updateDevices();
-              },
-              error: function(xhr, status, err) {
-              }
-          });
-      }
-
       function unregister(pushURL) {
         $.ajax({
               type: 'GET',
@@ -86,82 +23,115 @@
           });
       }
 
-      function updateLocation(pusURL, lat, lon) {
+      var tracking = false;
+      function whereIsIt(pushURL) {
         $.ajax({
-              type: 'GET',
-              url: '/device/update/',
-              data: {pushURL: pushURL, lat: lat, lon: lon},
-              success: function(res, status, xhr) {
-                   console.log("location update");
-              },
-              error: function(xhr, status, err) {
-              }
-          });
+          type: 'POST',
+          url: '/device/lost/',
+          data: {pushURL: pushURL},
+          error: function(xhr, status, err) {
+            console.log("PUT failed: " + err);
+          }
+        });
+
+        if (!tracking) {
+          tracking = true;
+          setInterval(updateDevices, 5000);
+        }
+      }
+
+      function renderDeviceTable(devices) {
+        var template = "                                                 \
+          {{#devices}}                                                   \
+          {{#first}}                                                     \
+          <tr>                                                           \
+            <th>Device name</th>                                         \
+            <th>Last coordinates</th>                                    \
+          </tr>                                                          \
+          {{/first}}                                                     \
+            <tr>                                                         \
+              <td>{{DeviceName}}</td>                                    \
+              <td>                                                       \
+                <a href={{mapsURL}}{{Latitude}},{{Longitude}}            \
+                   target=_blank>                                        \
+                  ({{Latitude}}, {{Longitude}})                          \
+                </a>                                                     \
+              </td>                                                      \
+              <td>                                                       \
+                <button onclick=whereIsIt(\"{{PushURL}}\")>              \
+                  Where is it?                                           \
+                </button>                                                \
+              </td>                                                      \
+              <td>                                                       \
+                <button onclick=unregister(\"{{PushURL}}\")>             \
+                  Unregister                                             \
+                </button>                                                \
+              </td>                                                      \
+            </tr>                                                        \
+          {{/devices}}                                                   \
+          {{#empty}}                                                     \
+            <tr><td>No devices found!</td></tr>                          \
+          {{/empty}}                                                     \
+        ";
+
+        if (devices.length) {
+          devices[0].first = true;
+        }
+
+        var table = Mustache.render(template, {
+          devices: devices,
+          empty: !devices.length,
+          mapsURL: "https://maps.google.com/maps?q="
+        });
+
+        $("#devices").html(table);
       }
 
       function updateDevices() {
-        $("#devices").html("<div> Fetching list.. </div>");
+        $("#devices").html("Fetching list...");
         $.ajax({
-              type: 'GET',
-              url: '/device/list',
-              success: function(r) {
-
-              $("#devices").html("");
-
-               var result = JSON.parse(r)
-               $.each(result.Devices, function(key, value){
-                   $("#devices").append("<div class='devices'>" + value.DeviceName);
-                   $("#devices").append("<button type='button' onClick='unregister(\"" + value.PushURL + "\")''>Unregister</button>");
-                   $("#devices").append("<button type='button' onClick='updateLocation(\"" + value.PushURL + "\");'>Update location</button>");
-                   $("#devices").append("</div>");
-               });
-
-            },
-            error: function(xhr, status, err) {
-              $("#devices").html("<div> </div>");
-            }
-          });
+          type: 'GET',
+          url: '/device/list',
+          success: function(r) {
+            var result = JSON.parse(r)
+            renderDeviceTable(result.Devices);
+          },
+          error: function(xhr, status, err) {
+            $("#devices").html("Failed to fetch your devices!");
+          }
+        });
       }
 
       $("document").ready(function(){
 
-          $("#logout").hide();
+          $("#persona-logout").hide();
           $("#devices").hide();
-          $("#addDeviceDiv").hide()
 
           function loggedIn(email){
-            $("#login").hide();
-            $("#logout").show();
-
-            if (!navigator.push) {
-              $("#addDeviceDiv").hide()
-            } else {
-              $("#addDeviceDiv").show()
-            }
+            $("#persona-login").hide();
+            $("#persona-logout").show();
 
             $("#devices").show();
             updateDevices();
           }
-      
+
           function loggedOut(){
-            $("#logout").hide();
-            $("#login").show();
+            $("#persona-logout").hide();
+            $("#persona-login").show();
             $("#devices").hide();
-            $("#addDeviceDiv").hide()
           }
-      
-          $("#login").on("click", function(e) {
+
+          $("#persona-login").on("click", function(e) {
               e.preventDefault();
               navigator.id.get(mailVerified);
           });
-      
-          $("#logout").on("click", function(e) {
+
+          $("#persona-logout").on("click", function(e) {
               e.preventDefault();
               $.get('/auth/logout', loggedOut);
           });
-      
-          function mailVerified(assertion){
 
+          function mailVerified(assertion){
             $.ajax({
                 type: 'POST',
                   url: '/auth/login',
@@ -174,30 +144,13 @@
                 }
               });
           }
-      
+
           $.get('/auth/check', function (res) {
               if (res === "") {
                 loggedOut();
               } else {
                 loggedIn(res);
               }
-          });
-
-      
-          $("#addDeviceButton").click(function(event) {
-              event.preventDefault();
-
-              deviceName = $("#deviceName").val();
-
-              var req = navigator.push.register();
-              req.onsuccess = function() {
-                register(deviceName, req.result)
-              }
-
-              req.onerror = function(e) {
-                alert("Push registration error! " + JSON.stringify(e));
-              }
-
           });
     });
 
@@ -206,18 +159,8 @@
 
   <body>
     <h1 id="title">Where Is My Fox?</h1>
-    <div>
-        <button id="login">login</button>
-        <button id="logout">logout</button>
-    </div>
-
-    <div id="addDeviceDiv">
-        <input type="text" id="deviceName" placeholder="My Device">
-        <button type="button" id="addDeviceButton">Add Device</button> 
-    </div>
-
-    <div id="devices">
-    </div>
-
+    <table id="devices"></table>
+    <button id="persona-login"><div></div></button>
+    <button id="persona-logout">Logout</button>
   </body>
 </html>

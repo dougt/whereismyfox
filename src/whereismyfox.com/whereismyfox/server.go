@@ -2,14 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type DeviceInformation struct {
 	DeviceName string `json: "name"`
 	PushURL    string `json: "pushURL"`
+	Latitude   float64 `json: "latitude"`
+	Longitude  float64 `json: "longitude"`
 }
 
 type DeviceListResponse struct {
@@ -94,7 +99,23 @@ func deviceAddHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if addDevice(loginName, deviceName, pushURL) {
+	latitude := r.FormValue("latitude")
+	_, err = strconv.ParseFloat(latitude, 64)
+	if err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("Bad Request."))
+		return
+	}
+
+	longitude := r.FormValue("longitude")
+	_, err = strconv.ParseFloat(longitude, 64)
+	if err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("Bad Request."))
+		return
+	}
+
+	if addDevice(loginName, deviceName, pushURL, latitude, longitude) {
 		w.Write([]byte("ok"))
 		return
 	}
@@ -134,6 +155,7 @@ func deviceDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("device location handler!")
 
 	if !IsLoggedIn(r) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -151,6 +173,7 @@ func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
 
 	lat, err1 := strconv.ParseFloat(r.FormValue("lat"), 64)
 	lon, err2 := strconv.ParseFloat(r.FormValue("lon"), 64)
+	log.Println("Got coordinates ", lat, lon)
 
 	if err1 != nil || err2 != nil || pushURL == "" {
 		w.WriteHeader(400)
@@ -168,6 +191,52 @@ func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func deviceLostHandler(w http.ResponseWriter, r *http.Request) {
+	if !IsLoggedIn(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("."))
+		return
+	}
+
+	// check that this device is actually owned by the user
+	email := GetLoginName(r)
+	if email == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("."))
+		return
+	}
+
+	var lostDevice DeviceInformation
+	devices := devicesForUser(email)
+	for _, device := range devices {
+		if device.PushURL == r.FormValue("pushURL") {
+			lostDevice = device
+			break
+		}
+	}
+
+	if lostDevice.PushURL == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Push endpoint doesn't correspond to any device!"))
+	}
+
+	body := fmt.Sprintf("version=%d", uint64(time.Now().Unix()))
+	request, err := http.NewRequest("PUT", lostDevice.PushURL, strings.NewReader(body))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to PUT to endpoint!"))
+	}
+
+	request.Header["Content-Type"] = []string{"application/x-www-form-urlencoded"}
+
+	var client http.Client
+	_, err = client.Do(request)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to PUT to endpoint"))
+	}
+}
+
 func serveSingle(pattern string, filename string) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		log.Println("serving file " + filename);
@@ -181,6 +250,7 @@ func main() {
 	openDb()
 
 	http.HandleFunc("/device/update/", deviceLocationHandler)
+	http.HandleFunc("/device/lost/", deviceLostHandler)
 
 	// device management
 	http.HandleFunc("/device/list", deviceListHandler)
@@ -188,23 +258,32 @@ func main() {
 	http.HandleFunc("/device/delete/", deviceDeleteHandler)
 
 	// personas
-	http.HandleFunc("/auth/check", loginCheckHandler)
-	http.HandleFunc("/auth/login", loginHandler)
-	http.HandleFunc("/auth/logout", logoutHandler)
+	http.HandleFunc("/auth/check",    loginCheckHandler)
+	http.HandleFunc("/auth/login",    loginHandler)
+	http.HandleFunc("/auth/applogin", appLoginHandler)
+	http.HandleFunc("/auth/logout",   logoutHandler)
 
 
-	serveSingle("/",                "./static/index.html")
-	serveSingle("/index.html",      "./static/index.html")
-	serveSingle("/install.html",    "./static/install.html")
-	serveSingle("/push.html",       "./static/push.html")
-	serveSingle("/manifest.webapp", "./static/manifest.webapp")
-	serveSingle("/style.css",       "./static/style.css")
-	serveSingle("/logos/64.png",    "./static/logos/64.png")
-	serveSingle("/logos/128.png",   "./static/logos/128.png")
+	serveSingle("/",                      "./static/index.html")
+	serveSingle("/index.html",            "./static/index.html")
+	serveSingle("/install.html",          "./static/install.html")
+	serveSingle("/push.html",             "./static/push.html")
+	serveSingle("/app.html",              "./app/index.html")
+	serveSingle("/style.css",             "./static/style.css")
+	serveSingle("/style-app.css",         "./static/style-app.css")
+	serveSingle("/style-common.css",      "./static/style-common.css")
+	serveSingle("/logos/64.png",          "./static/logos/64.png")
+	serveSingle("/logos/128.png",         "./static/logos/128.png")
+	serveSingle("/img/persona-login.png", "./static/img/persona_sign_in_black.png")
+	serveSingle("/lib/mustache.js",       "./static/lib/mustache.js")
 
-	serveSingle("/package.manifest",   "./static/package.manifest")
-	serveSingle("/package.zip",        "./static/package.zip")
+	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
+		filename := "./app/manifest.webapp"
+		log.Println("serving manifest from " + filename);
 
+		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
+		http.ServeFile(w, r, filename)
+	})
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 
