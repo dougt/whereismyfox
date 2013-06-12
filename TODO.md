@@ -56,3 +56,9 @@ Better Google Maps integration
 Instead of just linking to the Google Maps query for the coordinates, we could
 use the Maps API to actually display a map with the device's location (and
 perhaps track it).
+
+Stop tracking
+-------------
+
+When do we stop tracking? A button in the site could trigger another push
+notification to the app so it stops tracking.
