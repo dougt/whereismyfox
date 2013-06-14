@@ -12,6 +12,6 @@
 		"push":{},
 		"geolocation":{}
 	},
-	"messages": [{ "push": "/index.html" }],
+	"messages": [{ "push": "/app.html" }],
 	"version": "1"
 }
