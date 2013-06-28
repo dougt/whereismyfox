@@ -85,8 +85,8 @@ func (self DB) UpdateDeviceLocation(device *Device, latitude, longitude float64)
 
 func (self DB) ListDevicesForUser(user string) ([]Device, error) {
 	res, err := self.connection.Query(
-		`select id, user, name, endpoint from devices
-		where user=?`, user)
+		`select id, user, name, endpoint, latitude, longitude, timestamp
+		from devices where user=?`, user)
 
 	if err != nil {
 		return nil, err
@@ -95,7 +95,8 @@ func (self DB) ListDevicesForUser(user string) ([]Device, error) {
 	devices := make([]Device, 0)
 	for res.Next() {
 		d := Device{}
-		err = res.Scan(&d.Id, &d.User, &d.Name, &d.Endpoint)
+		err = res.Scan(&d.Id, &d.User, &d.Name, &d.Endpoint, &d.Latitude,
+		&d.Longitude, &d.Timestamp)
 		if err != nil {
 			return nil, err
 		}
