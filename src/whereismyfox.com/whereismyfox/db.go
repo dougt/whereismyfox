@@ -77,7 +77,7 @@ func (self DB) GetDeviceById(id int64) (*Device, error) {
 
 func (self DB) UpdateDeviceLocation(device *Device, latitude, longitude float64) error {
 	_, err := self.connection.Exec(
-		`update devices set latitude=?, longitude=?, timestamp=date('now')
+		`update devices set latitude=?, longitude=?, timestamp=strftime('%s', 'now')
 		where id=?`, latitude, longitude, device.Id)
 
 	return err
