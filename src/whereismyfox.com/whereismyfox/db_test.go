@@ -79,7 +79,7 @@ func TestUpdateDeviceLocation(t *testing.T) {
 	testLatitude := 37.38835
 	testLongitude := -122.082724
 
-	if device, err := db.GetDeviceById(1); err != nil {
+	if device, err := db.GetDeviceById(1); err == nil {
 		err = db.UpdateDeviceLocation(device, testLatitude, testLongitude)
 		if err != nil {
 			t.Error("Failed to update device location: " + err.Error())
