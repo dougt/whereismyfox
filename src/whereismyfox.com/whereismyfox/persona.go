@@ -75,7 +75,6 @@ func doLogin(verifierURL string, w http.ResponseWriter, r *http.Request) {
 	}
 
 	assertion := r.FormValue("assertion")
-	log.Println("assertion " + assertion)
 
 	if assertion == "" {
 		w.WriteHeader(400)
@@ -114,13 +113,6 @@ func doLogin(verifierURL string, w http.ResponseWriter, r *http.Request) {
 
 	session, _ := store.Get(r, "persona-session")
 	session.Values["email"] = pr.Email
-
-	log.Println("status recorded as ", pr.Status)
-	log.Println("email recorded as ", pr.Email)
-	log.Println("Audience recorded as ", pr.Audience)
-	log.Println("Expires recorded as ", pr.Expires)
-	log.Println("Issuer recorded as ", pr.Issuer)
-
 	session.Save(r, w)
 
 	w.Write(body)
