@@ -45,8 +45,11 @@ func getDeviceForRequest(request *restful.Request, response *restful.Response) *
 }
 
 func addDevice(request *restful.Request, response *restful.Response) {
-	name := request.QueryParameter("name")
-	endpoint := request.QueryParameter("endpoint")
+	indevice := new(Device)
+	request.ReadEntity(indevice)
+
+	name := indevice.Name
+	endpoint := indevice.Endpoint
 
 	if name == "" || endpoint == "" {
 		response.WriteError(http.StatusBadRequest, nil)
@@ -144,7 +147,7 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.PUT("/").To(addDevice).
-		Consumes("application/x-www-form-urlencoded").
+		Consumes("application/json; charset=UTF-8").
 		Doc("Add a device").
 		Param(ws.QueryParameter("name", "The name for the device")).
 		Param(ws.QueryParameter("endpoint", "The push endpoint for the device")).

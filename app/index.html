@@ -6,16 +6,36 @@
     <link rel="stylesheet" type="text/css" href="style-app.css">
     <script>
       var API_BASE_URL = "http://whereismyfox.com";
+      function makeXHR(url, method, onsuccess, onerror) {
+        var xhr = new XMLHttpRequest();
+        xhr.open(method, url);
 
-      function onRequestLoaded() {
-        if (this.status === 200) {
-          moveToNextStep();
-        }
+        xhr.setRequestHeader("Connection", "close");
+        xhr.onload = function() {
+          if (xhr.status == 200) {
+            onsuccess();
+            return;
+          }
+
+          onerror();
+        };
+
+        xhr.onerror = onerror;
+        return xhr;
       }
 
-      function doPOST(url, form, onload, onerror) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", url);
+      function doPUT(url, obj, onsuccess, onerror) {
+        var payload = JSON.stringify(obj);
+
+        var xhr = makeXHR(url, "PUT", onsuccess, onerror);
+        xhr.setRequestHeader("Content-length", payload.length);
+        xhr.setRequestHeader("Content-type", "application/json; charset=UTF-8");
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.send(payload);
+      }
+
+      function doPOST(url, form, onsuccess, onerror) {
+        var xhr = makeXHR(url, "POST", onsuccess, onerror);
 
         var param = [];
         for (var key in form) {
@@ -24,13 +44,9 @@
 
         param = param.join("&");
 
-        xhr.setRequestHeader("Connection", "close");
         xhr.setRequestHeader("Content-length", param.length);
         xhr.setRequestHeader("Content-type",
                              "application/x-www-form-urlencoded");
-
-        xhr.onload = onload;
-        xhr.onerror = onerror;
         xhr.send(param);
       }
 
@@ -70,7 +86,7 @@
         function onMailVerified(assertion) {
           doPOST(API_BASE_URL + "/auth/applogin",
                  {assertion: assertion},
-                 onRequestLoaded,
+                 moveToNextStep,
                  moveToErrorStep);
         }
 
@@ -96,12 +112,6 @@
           navigator.geolocation.getCurrentPosition(
             function(position) {
               console.log(position.coords.latitude);
-              var latitude = document.getElementById("latitude");
-              latitude.value = position.coords.latitude;
-
-              var longitude = document.getElementById("longitude");
-              longitude.value = position.coords.longitude;
-
               moveToNextStep();
             }, moveToErrorStep, {maximumAge: 0});
         });
@@ -113,12 +123,10 @@
       <p>We now need to register this phone to Where Is My Fox, and then we'll
       be done.<p>
 
-      <form id="register-form" action="/device/add/" method="POST">
+      <form id="register-form">
         <label for="device-name">Device name:</label>
-        <input id="device-name" type="text" name="deviceName" required>
-        <input id="push-url" type="hidden" name="pushURL">
-        <input id="latitude" type="hidden" name="latitude">
-        <input id="longitude" type="hidden" name="longitude">
+        <input id="device-name" type="text" name="name" required>
+        <input id="push-url" name="endpoint" type="hidden">
         <button id="register-submit" type="submit">Register!</button>
       </form>
     </section>
@@ -132,13 +140,26 @@
 
       var submitButton = document.getElementById("register-submit");
       submitButton.addEventListener("click", function(event) {
+        event.preventDefault();
         if (!pushURLInput.value) {
-          event.preventDefault();
           moveToErrorStep();
           return;
         }
+
+        var obj = {};
+        var fields = this.form.getElementsByTagName("input");
+        for (var i = 0; i < fields.length; i++) {
+          obj[fields[i].name] = fields[i].value;
+        }
+
+        doPUT(API_BASE_URL + "/device/", obj, moveToNextStep, moveToErrorStep);
       });
     </script>
+    <section id="setup-step4" class="setup-step">
+      <h1>All done!</h1>
+
+      <p>Thanks for registering!</p>
+    </section>
   </body>
   <script>
     var currentStep = 1;
