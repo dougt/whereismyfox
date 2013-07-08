@@ -10,6 +10,10 @@
     <script src="/lib/mustache.js"></script>
 
     <script>
+      var personaArguments = {
+        siteName: 'Where Is My Fox?',
+      };
+
       function unregister(pushURL) {
         $.ajax({
               type: 'GET',
@@ -123,7 +127,7 @@
 
           $("#persona-login").on("click", function(e) {
               e.preventDefault();
-              navigator.id.get(mailVerified);
+              navigator.id.get(mailVerified, personaArguments);
           });
 
           $("#persona-logout").on("click", function(e) {
@@ -160,7 +164,9 @@
   <body>
     <h1 id="title">Where Is My Fox?</h1>
     <table id="devices"></table>
-    <button id="persona-login"><div></div></button>
-    <button id="persona-logout">Logout</button>
+    <div class="persona">
+       <button id="persona-login"></button>
+       <button id="persona-logout">Logout</button>
+    </div>
   </body>
 </html>

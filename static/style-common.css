@@ -24,13 +24,14 @@ button {
   font-weight: bold;
 }
 
-#persona-login {
+.persona {
   border: none;
   background: transparent;
+  text-align: center;
 }
 
-#persona-login div {
-  background-image: url("/img/persona-login.png");
+#persona-login {
+  background-image: url("img/persona_sign_in_black.png");
   width: 185px;
   height: 25px;
 }
