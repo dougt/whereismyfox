@@ -24,6 +24,10 @@ button {
   font-weight: bold;
 }
 
+#login {
+  text-align: center;
+}
+
 #persona-login {
   border: none;
   background: transparent;
