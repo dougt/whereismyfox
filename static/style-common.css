@@ -30,7 +30,7 @@ button {
 }
 
 #persona-login div {
-  background-image: url("/img/persona-login.png");
+  background-image: url("img/persona-login.png");
   width: 185px;
   height: 25px;
 }
