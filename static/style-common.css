@@ -24,13 +24,17 @@ button {
   font-weight: bold;
 }
 
+#login {
+  text-align: center;
+}
+
 #persona-login {
   border: none;
   background: transparent;
 }
 
 #persona-login div {
-  background-image: url("/img/persona-login.png");
+  background-image: url("img/persona-login.png");
   width: 185px;
   height: 25px;
 }
