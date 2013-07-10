@@ -5,6 +5,8 @@
     <link rel="stylesheet" type="text/css" href="style-common.css">
     <link rel="stylesheet" type="text/css" href="style-app.css">
     <script>
+      var me = null;
+
       var API_BASE_URL = "http://whereismyfox.com";
       function makeXHR(url, method, onsuccess, onerror) {
         var xhr = new XMLHttpRequest();
@@ -14,7 +16,7 @@
         xhr.onload = function() {
           if (xhr.status == 200) {
             if (onsuccess) {
-              onsuccess();
+              onsuccess(xhr.responseText);
             }
 
             return;
@@ -67,9 +69,8 @@
             );
 
             doPOST(
-              API_BASE_URL + "/device/update/",
+              API_BASE_URL + "/device/location/" + me.Id,
               {
-                "pushURL": message.pushEndpoint,
                 "lat": position.coords.latitude,
                 "lon": position.coords.longitude
               }, null, null);
@@ -157,7 +158,11 @@
           obj[fields[i].name] = fields[i].value;
         }
 
-        doPUT(API_BASE_URL + "/device/", obj, moveToNextStep, moveToErrorStep);
+        doPUT(API_BASE_URL + "/device/", obj,
+              function(response) {
+                me = JSON.parse(response);
+                moveToNextStep();
+              }, moveToErrorStep);
       });
     </script>
     <section id="setup-step4" class="setup-step">
