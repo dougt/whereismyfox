@@ -31,11 +31,6 @@ func GetLoginName(r *http.Request) string {
 	session, _ := store.Get(r, "persona-session")
 	email := session.Values["email"]
 
-	log.Println("emailaddress:")
-	log.Println(email)
-	log.Println(email != nil)
-	fmt.Printf("unexpected type %T", email)
-
 	if str, ok := email.(string); ok {
 		return str
 	}
