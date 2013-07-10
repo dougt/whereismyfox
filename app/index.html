@@ -53,7 +53,7 @@
 
         xhr.setRequestHeader("Content-length", param.length);
         xhr.setRequestHeader("Content-type",
-                             "application/x-www-form-urlencoded");
+                             "application/x-www-form-urlencoded; charset=UTF-8");
         xhr.send(param);
       }
 
@@ -71,8 +71,8 @@
             doPOST(
               API_BASE_URL + "/device/location/" + me.Id,
               {
-                "lat": position.coords.latitude,
-                "lon": position.coords.longitude
+                "latitude": position.coords.latitude,
+                "longitude": position.coords.longitude
               }, null, null);
           }
         );
