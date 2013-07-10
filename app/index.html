@@ -13,11 +13,16 @@
         xhr.setRequestHeader("Connection", "close");
         xhr.onload = function() {
           if (xhr.status == 200) {
-            onsuccess();
+            if (onsuccess) {
+              onsuccess();
+            }
+
             return;
           }
 
-          onerror();
+          if (onerror) {
+            onerror();
+          }
         };
 
         xhr.onerror = onerror;
