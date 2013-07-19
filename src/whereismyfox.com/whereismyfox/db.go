@@ -1,105 +1,108 @@
 package main
 
 import (
-	"code.google.com/p/gosqlite/sqlite"
-	"log"
-	"strconv"
-	"time"
+	"database/sql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-var gConn *sqlite.Conn
-
-func openDb() {
-	conn, err := sqlite.Open("db.sqlite")
-	if err != nil {
-		log.Fatalf("Unable to open the database: %s", err)
-	}
-
-	conn.Exec("CREATE TABLE devices(id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, email TEXT, deviceName TEXT, pushURL TEXT, lon FLOAT, lat FLOAT, UNIQUE (pushURL));")
-	gConn = conn
+type Device struct {
+	User      string
+	Id        int64   `json: "id"`
+	Name      string  `json: "name"`
+	Endpoint  string  `json: "endpoint"`
+	Latitude  float64 `json: "latitude"`
+	Longitude float64 `json: "longitude"`
+	Timestamp string  `json: "timestamp"`
 }
 
-func closeDb() {
-	gConn.Close()
-	gConn = nil
+type DB struct {
+	connection *sql.DB
 }
 
-func updateDeviceLocation(pushURL string, lat float64, lon float64) bool {
+func OpenDB(dbpath string) (*DB, error) {
+	conn, err := sql.Open("sqlite3", dbpath)
+	if err != nil {
+		return nil, err
+	}
 
-	err := gConn.Exec("UPDATE devices SET date=" +
-		strconv.FormatInt(time.Now().Unix(), 10) +
-		", lat=" + strconv.FormatFloat(lat, 'f', 4, 64) +
-		", lon=" + strconv.FormatFloat(lon, 'f', 4, 64) +
-		" WHERE pushURL='" + pushURL + "'")
+	_, err = conn.Exec(
+		`create table if not exists devices
+		(id integer primary key autoincrement,
+		user text, name text, endpoint text unique,
+		latitude float default 0, longitude float default 0,
+		timestamp text default "");`)
 
 	if err != nil {
-		log.Println("Error while update location: "+pushURL+" err: ", err)
-		return false
+		return nil, err
 	}
-	return true
+
+	return &DB{conn}, nil
 }
 
-func addDevice(email, deviceName, pushURL, latitude, longitude string) bool {
-
-	if email == "" || deviceName == "" || pushURL == "" {
-		return false
-	}
-
-	log.Println("adding new device: " + deviceName + " to db for user: " + email)
-	now := strconv.FormatInt(time.Now().Unix(), 10)
-
-	insertString := "INSERT INTO devices(date, email, deviceName, pushURL, lon, lat) VALUES('" +
-		now + "', '" + email + "', '" + deviceName + "', '" + pushURL + "', '" + longitude + "', '" +
-		latitude + "')"
-
-	err := gConn.Exec(insertString)
-	if err != nil {
-		log.Fatalf("Error while Inserting: %s", err)
-		return false
-	}
-	return true
+func (self DB) Close() {
+	self.connection.Close()
+	self.connection = nil
 }
 
-func deleteDevice(pushURL string) bool {
+func (self DB) AddDevice(user, name, endpoint string) (*Device, error) {
+	res, err := self.connection.Exec(
+		`insert into devices(user, name, endpoint) values(?, ?, ?)`,
+		user, name, endpoint)
 
-	delString := "DELETE FROM devices WHERE pushURL='" + pushURL + "'"
-
-	err := gConn.Exec(delString)
 	if err != nil {
-		log.Fatalf("Error while deleting: %s", err)
-		return false
+		return nil, err
 	}
-	return true
+
+	id, _ := res.LastInsertId()
+	return &Device{Id: id, User: user, Name: name, Endpoint: endpoint}, nil
 }
 
-func devicesForUser(email string) []DeviceInformation {
+func (self DB) GetDeviceById(id int64) (*Device, error) {
+	row := self.connection.QueryRow(
+		`select id, user, name, endpoint, latitude, longitude, timestamp
+		from devices where id=?`, id)
 
-	selectStmt, err := gConn.Prepare("SELECT deviceName, pushURL, lat, lon FROM devices WHERE email='" + email + "';")
+	d := Device{}
+	err := row.Scan(
+		&d.Id, &d.User, &d.Name,
+		&d.Endpoint, &d.Latitude,
+		&d.Longitude, &d.Timestamp)
+
 	if err != nil {
-		log.Fatalf("Error while preparing select: %s", err)
-		return nil
+		return nil, err
 	}
 
-	err = selectStmt.Exec()
+	return &d, nil
+}
+
+func (self DB) UpdateDeviceLocation(device *Device, latitude, longitude float64) error {
+	_, err := self.connection.Exec(
+		`update devices set latitude=?, longitude=?, timestamp=strftime('%s', 'now')
+		where id=?`, latitude, longitude, device.Id)
+
+	return err
+}
+
+func (self DB) ListDevicesForUser(user string) ([]Device, error) {
+	res, err := self.connection.Query(
+		`select id, user, name, endpoint, latitude, longitude, timestamp
+		from devices where user=?`, user)
+
 	if err != nil {
-		log.Fatalf("Error while exec select: %s", err)
-		return nil
+		return nil, err
 	}
 
-	result := make([]DeviceInformation, 0)
-
-	for selectStmt.Next() {
-		var deviceName = ""
-		var pushURL = ""
-		var latitude, longitude float64
-		err = selectStmt.Scan(&deviceName, &pushURL, &latitude, &longitude)
+	devices := make([]Device, 0)
+	for res.Next() {
+		d := Device{}
+		err = res.Scan(&d.Id, &d.User, &d.Name, &d.Endpoint, &d.Latitude,
+		&d.Longitude, &d.Timestamp)
 		if err != nil {
-			log.Fatalf("Error while getting row data: %s", err)
-			return nil
+			return nil, err
 		}
-		info := DeviceInformation{deviceName, pushURL, latitude, longitude}
-		result = append(result, info)
+
+		devices = append(devices, d)
 	}
 
-	return result
+	return devices, nil
 }
