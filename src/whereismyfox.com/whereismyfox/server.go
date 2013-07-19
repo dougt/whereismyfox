@@ -2,19 +2,19 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"github.com/emicklei/go-restful"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"github.com/emicklei/go-restful"
+	"time"
 )
 
 var gDB *DB
 
 func serveSingle(pattern string, filename string) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		log.Println("serving file " + filename);
+		log.Println("serving file " + filename)
 		http.ServeFile(w, r, filename)
 	})
 }
@@ -180,27 +180,27 @@ func main() {
 	restful.Add(createDeviceWebService())
 
 	// Persona handling
-	http.HandleFunc("/auth/check",    loginCheckHandler)
-	http.HandleFunc("/auth/login",    loginHandler)
+	http.HandleFunc("/auth/check", loginCheckHandler)
+	http.HandleFunc("/auth/login", loginHandler)
 	http.HandleFunc("/auth/applogin", appLoginHandler)
-	http.HandleFunc("/auth/logout",   logoutHandler)
+	http.HandleFunc("/auth/logout", logoutHandler)
 
-	serveSingle("/",                      "./static/index.html")
-	serveSingle("/index.html",            "./static/index.html")
-	serveSingle("/install.html",          "./static/install.html")
-	serveSingle("/push.html",             "./static/push.html")
-	serveSingle("/app.html",              "./app/index.html")
-	serveSingle("/style.css",             "./static/style.css")
-	serveSingle("/style-app.css",         "./static/style-app.css")
-	serveSingle("/style-common.css",      "./static/style-common.css")
-	serveSingle("/logos/64.png",          "./static/logos/64.png")
-	serveSingle("/logos/128.png",         "./static/logos/128.png")
+	serveSingle("/", "./static/index.html")
+	serveSingle("/index.html", "./static/index.html")
+	serveSingle("/install.html", "./static/install.html")
+	serveSingle("/push.html", "./static/push.html")
+	serveSingle("/app.html", "./app/index.html")
+	serveSingle("/style.css", "./static/style.css")
+	serveSingle("/style-app.css", "./static/style-app.css")
+	serveSingle("/style-common.css", "./static/style-common.css")
+	serveSingle("/logos/64.png", "./static/logos/64.png")
+	serveSingle("/logos/128.png", "./static/logos/128.png")
 	serveSingle("/img/persona-login.png", "./static/img/persona_sign_in_black.png")
-	serveSingle("/lib/mustache.js",       "./static/lib/mustache.js")
+	serveSingle("/lib/mustache.js", "./static/lib/mustache.js")
 
 	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
 		filename := "./app/manifest.webapp"
-		log.Println("serving manifest from " + filename);
+		log.Println("serving manifest from " + filename)
 
 		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
 		http.ServeFile(w, r, filename)

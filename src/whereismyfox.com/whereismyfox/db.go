@@ -96,7 +96,7 @@ func (self DB) ListDevicesForUser(user string) ([]Device, error) {
 	for res.Next() {
 		d := Device{}
 		err = res.Scan(&d.Id, &d.User, &d.Name, &d.Endpoint, &d.Latitude,
-		&d.Longitude, &d.Timestamp)
+			&d.Longitude, &d.Timestamp)
 		if err != nil {
 			return nil, err
 		}
