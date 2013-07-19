@@ -1,241 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"github.com/emicklei/go-restful"
 )
 
-type DeviceInformation struct {
-	DeviceName string `json: "name"`
-	PushURL    string `json: "pushURL"`
-	Latitude   float64 `json: "latitude"`
-	Longitude  float64 `json: "longitude"`
-}
-
-type DeviceListResponse struct {
-	Devices []DeviceInformation `json: "devices"`
-}
-
-func deviceListHandler(w http.ResponseWriter, r *http.Request) {
-
-	if !IsLoggedIn(r) {
-		log.Println("deviceListHandler: user not logged in")
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("."))
-		return
-	}
-
-	loginName := GetLoginName(r)
-	if loginName == "" {
-		log.Println("deviceListHandler: user does not have an email address")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("."))
-		return
-	}
-
-	deviceList := devicesForUser(loginName)
-
-	if deviceList == nil {
-		log.Println("deviceListHandler: device list is empty for user")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("."))
-		return
-	}
-
-	var data []byte
-	var err error
-
-	response := DeviceListResponse{deviceList}
-
-	data, err = json.Marshal(response)
-	if err != nil {
-		log.Println("deviceListHandler: could not marshal data")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("."))
-		return
-	}
-
-	w.Write(data)
-}
-
-func deviceAddHandler(w http.ResponseWriter, r *http.Request) {
-
-	if !IsLoggedIn(r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("."))
-		return
-	}
-
-	loginName := GetLoginName(r)
-	if loginName == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("."))
-		return
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-		return
-	}
-
-	pushURL := r.FormValue("pushURL")
-	if pushURL == "" {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-		return
-	}
-
-	deviceName := r.FormValue("deviceName")
-	if deviceName == "" {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-		return
-	}
-
-	latitude := r.FormValue("latitude")
-	_, err = strconv.ParseFloat(latitude, 64)
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-		return
-	}
-
-	longitude := r.FormValue("longitude")
-	_, err = strconv.ParseFloat(longitude, 64)
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-		return
-	}
-
-	if addDevice(loginName, deviceName, pushURL, latitude, longitude) {
-		w.Write([]byte("ok"))
-		return
-	}
-
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("."))
-}
-
-func deviceDeleteHandler(w http.ResponseWriter, r *http.Request) {
-
-	if !IsLoggedIn(r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("."))
-		return
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-	}
-
-	pushURL := r.FormValue("pushURL")
-	if pushURL == "" {
-		log.Println(err)
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-	}
-
-	if deleteDevice(pushURL) {
-		w.Write([]byte("ok"))
-		return
-	}
-
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("."))
-}
-
-func deviceLocationHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("device location handler!")
-
-	if !IsLoggedIn(r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("."))
-		return
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-	}
-
-	pushURL := r.FormValue("pushURL")
-
-	lat, err1 := strconv.ParseFloat(r.FormValue("lat"), 64)
-	lon, err2 := strconv.ParseFloat(r.FormValue("lon"), 64)
-	log.Println("Got coordinates ", lat, lon)
-
-	if err1 != nil || err2 != nil || pushURL == "" {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-		return
-	}
-
-	if updateDeviceLocation(pushURL, lat, lon) {
-		w.Write([]byte("ok"))
-		return
-	}
-
-	w.WriteHeader(400)
-	w.Write([]byte("Bad Request."))
-	return
-}
-
-func deviceLostHandler(w http.ResponseWriter, r *http.Request) {
-	if !IsLoggedIn(r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("."))
-		return
-	}
-
-	// check that this device is actually owned by the user
-	email := GetLoginName(r)
-	if email == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("."))
-		return
-	}
-
-	var lostDevice DeviceInformation
-	devices := devicesForUser(email)
-	for _, device := range devices {
-		if device.PushURL == r.FormValue("pushURL") {
-			lostDevice = device
-			break
-		}
-	}
-
-	if lostDevice.PushURL == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Push endpoint doesn't correspond to any device!"))
-	}
-
-	body := fmt.Sprintf("version=%d", uint64(time.Now().Unix()))
-	request, err := http.NewRequest("PUT", lostDevice.PushURL, strings.NewReader(body))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Failed to PUT to endpoint!"))
-	}
-
-	request.Header["Content-Type"] = []string{"application/x-www-form-urlencoded"}
-
-	var client http.Client
-	_, err = client.Do(request)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Failed to PUT to endpoint"))
-	}
-}
+var gDB *DB
 
 func serveSingle(pattern string, filename string) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -244,25 +19,171 @@ func serveSingle(pattern string, filename string) {
 	})
 }
 
+func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+	if !IsLoggedIn(request.Request) {
+		response.WriteError(http.StatusUnauthorized, nil)
+		return
+	}
+
+	chain.ProcessFilter(request, response)
+}
+
+func getDeviceForRequest(request *restful.Request, response *restful.Response) *Device {
+	id, err := strconv.ParseInt(request.PathParameter("device-id"), 10, 64)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, nil)
+		return nil
+	}
+
+	device, err := gDB.GetDeviceById(id)
+	if device != nil && device.User == GetLoginName(request.Request) {
+		return device
+	}
+
+	response.WriteError(http.StatusNotFound, nil)
+	return nil
+}
+
+func addDevice(request *restful.Request, response *restful.Response) {
+	indevice := new(Device)
+	request.ReadEntity(indevice)
+
+	name := indevice.Name
+	endpoint := indevice.Endpoint
+
+	if name == "" || endpoint == "" {
+		response.WriteError(http.StatusBadRequest, nil)
+		return
+	}
+
+	device, err := gDB.AddDevice(GetLoginName(request.Request), name, endpoint)
+	if err == nil {
+		response.WriteEntity(*device)
+	} else {
+		response.WriteError(http.StatusInternalServerError, nil)
+	}
+}
+
+func serveDevicesByUser(request *restful.Request, response *restful.Response) {
+	devices, _ := gDB.ListDevicesForUser(GetLoginName(request.Request))
+
+	urls := []string{}
+	for _, d := range devices {
+		urls = append(urls, fmt.Sprintf("/device/%d", d.Id))
+	}
+
+	response.WriteEntity(urls)
+}
+
+func serveDevice(request *restful.Request, response *restful.Response) {
+	if device := getDeviceForRequest(request, response); device != nil {
+		response.WriteEntity(*device)
+	}
+}
+
+func updateDeviceLocation(request *restful.Request, response *restful.Response) {
+	device := getDeviceForRequest(request, response)
+	if device == nil {
+		return
+	}
+
+	latitude, err := strconv.ParseFloat(request.QueryParameter("latitude"), 64)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, nil)
+	}
+
+	longitude, err := strconv.ParseFloat(request.QueryParameter("longitude"), 64)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, nil)
+	}
+
+	err = gDB.UpdateDeviceLocation(device, latitude, longitude)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, nil)
+	}
+}
+
+func reportDeviceLost(request *restful.Request, response *restful.Response) {
+	device := getDeviceForRequest(request, response)
+	if device == nil {
+		return
+	}
+
+	// Issue push notification to device
+	body := fmt.Sprintf("version=%d", uint64(time.Now().Unix()))
+	pushRequest, err := http.NewRequest("PUT", device.Endpoint, strings.NewReader(body))
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, nil)
+	}
+
+	pushRequest.Header["Content-Type"] = []string{"application/x-www-form-urlencoded"}
+
+	var client http.Client
+	_, err = client.Do(pushRequest)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, nil)
+	}
+}
+
+func createDeviceWebService() *restful.WebService {
+	ws := new(restful.WebService)
+
+	ws.
+		Filter(ensureIsLoggedIn).
+		Path("/device").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	ws.
+		Route(ws.GET("/").To(serveDevicesByUser).
+		Doc("Retrieve all devices owned by a user").
+		Writes([]Device{}))
+
+	ws.
+		Route(ws.GET("/{device-id}").To(serveDevice).
+		Doc("Retrieve a device based on its id").
+		Param(ws.PathParameter("device-id", "The identifier for the device")).
+		Writes(Device{}))
+
+	ws.
+		Route(ws.PUT("/").To(addDevice).
+		Consumes("application/json; charset=UTF-8").
+		Doc("Add a device").
+		Param(ws.QueryParameter("name", "The name for the device")).
+		Param(ws.QueryParameter("endpoint", "The push endpoint for the device")).
+		Writes(Device{}))
+
+	ws.
+		Route(ws.POST("/location/{device-id}").To(updateDeviceLocation).
+		Consumes("application/x-www-form-urlencoded; charset=UTF-8").
+		Doc("Update a device's latitude and longitude").
+		Param(ws.QueryParameter("latitude", "The latitude where the device was observed")).
+		Param(ws.QueryParameter("longitude", "The longitude where the device was observed")).
+		Writes(Device{}))
+
+	ws.
+		Route(ws.POST("/lost/{device-id}").To(reportDeviceLost).
+		Doc("Report a device as lost").
+		Writes(Device{}))
+
+	return ws
+}
+
 func main() {
-
 	readConfig()
-	openDb()
+	db, err := OpenDB("db.sqlite")
+	if err != nil {
+		panic(err)
+	}
 
-	http.HandleFunc("/device/update/", deviceLocationHandler)
-	http.HandleFunc("/device/lost/", deviceLostHandler)
+	gDB = db
+	restful.Add(createDeviceWebService())
 
-	// device management
-	http.HandleFunc("/device/list", deviceListHandler)
-	http.HandleFunc("/device/add/", deviceAddHandler)
-	http.HandleFunc("/device/delete/", deviceDeleteHandler)
-
-	// personas
+	// Persona handling
 	http.HandleFunc("/auth/check",    loginCheckHandler)
 	http.HandleFunc("/auth/login",    loginHandler)
 	http.HandleFunc("/auth/applogin", appLoginHandler)
 	http.HandleFunc("/auth/logout",   logoutHandler)
-
 
 	serveSingle("/",                      "./static/index.html")
 	serveSingle("/index.html",            "./static/index.html")
@@ -287,7 +208,6 @@ func main() {
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 
-	var err error
 	if gServerConfig.UseTLS {
 		err = http.ListenAndServeTLS(gServerConfig.Hostname+":"+gServerConfig.Port,
 			gServerConfig.CertFilename,
@@ -299,5 +219,5 @@ func main() {
 	}
 
 	log.Println("Exiting... ", err)
-	closeDb()
+	gDB.Close()
 }
