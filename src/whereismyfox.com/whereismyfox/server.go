@@ -214,7 +214,7 @@ func main() {
 			gServerConfig.KeyFilename,
 			nil)
 	} else {
-		log.Println("This is a really unsafe way to run the push server.  Really.  Don't do this in production.")
+		log.Println("This is a really unsafe way to run the server.  Really.  Don't do this in production.")
 		err = http.ListenAndServe(gServerConfig.Hostname+":"+gServerConfig.Port, nil)
 	}
 
