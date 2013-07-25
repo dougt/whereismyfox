@@ -14,27 +14,13 @@
         siteName: 'Where Is My Fox?',
       };
 
-      function unregister(pushURL) {
-        $.ajax({
-              type: 'GET',
-              url: '/device/delete/',
-              data: {pushURL: pushURL},
-              success: function(res, status, xhr) {
-                updateDevices();
-              },
-              error: function(xhr, status, err) {
-              }
-          });
-      }
-
       var tracking = false;
-      function whereIsIt(pushURL) {
+      function whereIsIt(id) {
         $.ajax({
           type: 'POST',
-          url: '/device/lost/',
-          data: {pushURL: pushURL},
+          url: '/device/lost/' + id,
           error: function(xhr, status, err) {
-            console.log("PUT failed: " + err);
+            console.log("Failed to report device lost: " + err);
           }
         });
 
@@ -54,7 +40,7 @@
           </tr>                                                          \
           {{/first}}                                                     \
             <tr>                                                         \
-              <td>{{DeviceName}}</td>                                    \
+              <td>{{Name}}</td>                                          \
               <td>                                                       \
                 <a href={{mapsURL}}{{Latitude}},{{Longitude}}            \
                    target=_blank>                                        \
@@ -62,13 +48,8 @@
                 </a>                                                     \
               </td>                                                      \
               <td>                                                       \
-                <button onclick=whereIsIt(\"{{PushURL}}\")>              \
+                <button onclick=whereIsIt({{Id}})>                       \
                   Where is it?                                           \
-                </button>                                                \
-              </td>                                                      \
-              <td>                                                       \
-                <button onclick=unregister(\"{{PushURL}}\")>             \
-                  Unregister                                             \
                 </button>                                                \
               </td>                                                      \
             </tr>                                                        \
@@ -93,17 +74,30 @@
 
       function updateDevices() {
         $("#devices").html("Fetching list...");
-        $.ajax({
-          type: 'GET',
-          url: '/device/list',
-          success: function(r) {
-            var result = JSON.parse(r)
-            renderDeviceTable(result.Devices);
-          },
-          error: function(xhr, status, err) {
-            $("#devices").html("Failed to fetch your devices!");
-          }
-        });
+
+        function failedToFetchDevices() {
+          $("#devices").html("Failed to fetch your devices!");
+        }
+
+        $.getJSON('/device').then(function(list) {
+          var deviceRequests = list.map(function(url) {
+            return $.getJSON(url);
+          });
+
+          $.when.apply(null, deviceRequests).then(function() {
+            var devices = [];
+
+            if (deviceRequests.length == 1) {
+              devices.push(arguments[0]);
+            } else {
+              for (var i = 0; i < arguments.length; i++) {
+                devices.push(arguments[i][0]);
+              }
+            }
+
+            renderDeviceTable(devices);
+          }, failedToFetchDevices);
+        }, failedToFetchDevices);
       }
 
       $("document").ready(function(){
