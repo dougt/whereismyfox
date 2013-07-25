@@ -195,7 +195,7 @@ func main() {
 	serveSingle("/style-common.css", "./static/style-common.css")
 	serveSingle("/logos/64.png", "./static/logos/64.png")
 	serveSingle("/logos/128.png", "./static/logos/128.png")
-	serveSingle("/img/persona-login.png", "./static/img/persona_sign_in_black.png")
+	serveSingle("/img/persona-login.png", "./static/img/persona-login.png")
 	serveSingle("/lib/mustache.js", "./static/lib/mustache.js")
 
 	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
