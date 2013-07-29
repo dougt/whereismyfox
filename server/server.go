@@ -158,13 +158,11 @@ func createDeviceWebService() *restful.WebService {
 		Consumes("application/x-www-form-urlencoded; charset=UTF-8").
 		Doc("Update a device's latitude and longitude").
 		Param(ws.QueryParameter("latitude", "The latitude where the device was observed")).
-		Param(ws.QueryParameter("longitude", "The longitude where the device was observed")).
-		Writes(Device{}))
+		Param(ws.QueryParameter("longitude", "The longitude where the device was observed")))
 
 	ws.
 		Route(ws.POST("/lost/{device-id}").To(reportDeviceLost).
-		Doc("Report a device as lost").
-		Writes(Device{}))
+		Doc("Report a device as lost"))
 
 	return ws
 }
