@@ -188,7 +188,6 @@ func main() {
 	serveSingle("/", "./static/index.html")
 	serveSingle("/index.html", "./static/index.html")
 	serveSingle("/install.html", "./static/install.html")
-	serveSingle("/push.html", "./static/push.html")
 	serveSingle("/app.html", "./app/index.html")
 	serveSingle("/style.css", "./static/style.css")
 	serveSingle("/style-app.css", "./static/style-app.css")
