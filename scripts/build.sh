@@ -1,2 +1,1 @@
-rm -f whereismyfox
-GOPATH=`pwd` go build whereismyfox.com/whereismyfox
+go build -o $PWD/whereismyfox github.com/dougt/whereismyfox/server
