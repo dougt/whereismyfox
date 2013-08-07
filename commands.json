@@ -1,4 +1,5 @@
 [
     {"id": 0, "name": "Start tracking", "description": "Start tracking the device"},
-    {"id": 1, "name": "Stop tracking", "description": "Stop tracking the device"}
+    {"id": 1, "name": "Stop tracking", "description": "Stop tracking the device"},
+    {"id": 2, "name": "Wipe", "description": "Wipe data from the device"}
 ]
