@@ -23,6 +23,12 @@ var gTestDevices = []Device{
 		Latitude: 0, Longitude: 0, Timestamp: ""},
 }
 
+var gTestCommands = []Command{
+	{Id: 1, Name: "Track", Description: "Start tracking a device"},
+	{Id: 2, Name: "Untrack", Description: "Stop tracking a device"},
+	{Id: 3, Name: "Wipe", Description: "Wipe a device's personal information"},
+}
+
 func initTestDatabase(t *testing.T) (*DB, func()) {
 	testDBFile, err := ioutil.TempFile("", "whereismyfoxdb")
 	if err != nil {
@@ -32,7 +38,15 @@ func initTestDatabase(t *testing.T) (*DB, func()) {
 	testDBPath := testDBFile.Name()
 	db, err := OpenDB(testDBPath)
 
-	for _, device := range gTestDevices {
+	for _, command := range gTestCommands {
+		_, err := db.AddCommand(command.Id, command.Name, command.Description)
+		if err != nil {
+			t.Log("Failed to add command: " + err.Error())
+			t.FailNow()
+		}
+	}
+
+	for i, device := range gTestDevices {
 		added, err := db.AddDevice(device.User, device.Name, device.Endpoint)
 
 		if err != nil {
@@ -42,6 +56,18 @@ func initTestDatabase(t *testing.T) (*DB, func()) {
 
 		if *added != device {
 			t.Errorf("Mismatch in added device: %#v != %#v", *added, device)
+		}
+
+		for j, command := range gTestCommands {
+			if j > i {
+				break
+			}
+
+			err = db.AddCommandForDevice(added.Id, command.Id)
+			if err != nil {
+				t.Log("Failed to add command for device: " + err.Error())
+				t.FailNow()
+			}
 		}
 	}
 
@@ -118,5 +144,40 @@ func TestListDevicesForUser(t *testing.T) {
 		if device.User != "ggp@mozilla.com" {
 			t.Errorf("Wrong user: %s", devices[0].User)
 		}
+	}
+}
+
+func TestListCommandsForDevice(t *testing.T) {
+	db, cleanup := initTestDatabase(t)
+	defer cleanup()
+
+	for i, device := range gTestDevices {
+		commands, err := db.ListCommandsForDevice(&device)
+
+		if err != nil {
+			t.Error("Failed to list commands: " + err.Error())
+		}
+
+		if len(commands) != i + 1 {
+			t.Errorf("Wrong number of commands for device %d: %d", device.Id,
+			len(commands))
+		}
+	}
+}
+
+func TestUpdateCommandsForDevice(t *testing.T) {
+	db, cleanup := initTestDatabase(t)
+	defer cleanup()
+
+	device, _ := db.GetDeviceById(1)
+	newCommands := []int64{1, 2, 3}
+
+	if err := db.UpdateCommandsForDevice(device.Id, newCommands); err != nil {
+		t.Errorf("Failed to update commands for device: %s", err.Error())
+	}
+
+	commands, _ := db.ListCommandsForDevice(device)
+	if len(commands) != len(newCommands) {
+		t.Errorf("Unexpected number of commands: %d", len(commands))
 	}
 }

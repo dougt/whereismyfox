@@ -14,22 +14,6 @@
         siteName: 'Where Is My Fox?',
       };
 
-      var tracking = false;
-      function whereIsIt(id) {
-        $.ajax({
-          type: 'POST',
-          url: '/device/lost/' + id,
-          error: function(xhr, status, err) {
-            console.log("Failed to report device lost: " + err);
-          }
-        });
-
-        if (!tracking) {
-          tracking = true;
-          setInterval(updateDevices, 5000);
-        }
-      }
-
       function renderDeviceTable(devices) {
         var template = "                                                 \
           {{#devices}}                                                   \
@@ -48,10 +32,15 @@
                 </a>                                                     \
               </td>                                                      \
               <td>                                                       \
-                <button onclick=whereIsIt({{Id}})>                       \
-                  Where is it?                                           \
-                </button>                                                \
+                <select>                                                 \
+                  {{#commands}}                                          \
+                  <option data-trigger={{Trigger}}>{{Name}}</option>     \
+                  {{/commands}}                                          \
+                </select>                                                \
               </td>                                                      \
+              <td>                                                       \
+                <button>Do it!</button>                                  \
+              </tr>                                                      \
             </tr>                                                        \
           {{/devices}}                                                   \
           {{#empty}}                                                     \
@@ -70,6 +59,14 @@
         });
 
         $("#devices").html(table);
+        $("#devices button").click(function() {
+          var select = $(this).parent().prev().children("select"),
+              options = select.children("option"),
+              idx = select.get(0).selectedIndex,
+              trigger = $(options[idx]).attr("data-trigger");
+
+          $.post(trigger);
+        });
       }
 
       function updateDevices() {
@@ -95,7 +92,18 @@
               }
             }
 
-            renderDeviceTable(devices);
+            var commandRequests = devices.map(function(device) {
+              return $.getJSON('/device/' + device.Id + '/command');
+            });
+
+            $.when.apply(null, commandRequests).then(function() {
+              for (var i = 0; i < devices.length; i++) {
+                devices[i].commands = arguments[i];
+              }
+
+              renderDeviceTable(devices);
+            });
+
           }, failedToFetchDevices);
         }, failedToFetchDevices);
       }
