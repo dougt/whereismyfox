@@ -2,6 +2,7 @@
   <head>
     <title>WhereIsMyFox</title>
     <script src="https://login.persona.org/include.js"></script>
+    <script src="app/commands.js"></script>
     <link rel="stylesheet" type="text/css" href="style-common.css">
     <link rel="stylesheet" type="text/css" href="style-app.css">
     <script>
@@ -29,6 +30,12 @@
 
         xhr.onerror = onerror;
         return xhr;
+      }
+
+      function doGET(url, onsuccess, onerror) {
+        var xhr = makeXHR(url, "GET", onsuccess, onerror);
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.send(null);
       }
 
       function doPUT(url, obj, onsuccess, onerror) {
@@ -60,22 +67,13 @@
       navigator.mozSetMessageHandler("push", function(message) {
         console.log("Got push notification!");
 
-        navigator.geolocation.watchPosition(
-          function(position) {
-            console.log(
-              "Updating location to (" +
-              position.coords.latitude + ", " +
-              position.coords.longitude + ")"
-            );
-
-            doPOST(
-              API_BASE_URL + "/device/location/" + me.Id,
-              {
-                "latitude": position.coords.latitude,
-                "longitude": position.coords.longitude
-              }, null, null);
-          }
-        );
+        doGET(API_BASE_URL + "/device/invocation/" + message.version,
+              function(invocation) {
+                console.log("Got this invocation " + invocation);
+                runCommand(JSON.parse(invocation), me);
+              }, function() {
+                console.error("Failed to fetch invocation");
+              });
       });
     </script>
   </head>
@@ -158,11 +156,10 @@
           obj[fields[i].name] = fields[i].value;
         }
 
-        doPUT(API_BASE_URL + "/device/", obj,
-              function(response) {
-                me = JSON.parse(response);
-                moveToNextStep();
-              }, moveToErrorStep);
+        doPUT(API_BASE_URL + "/device/", obj, function(response) {
+          me = JSON.parse(response);
+          registerCommands(me, moveToNextStep, moveToErrorStep);
+        }, moveToErrorStep);
       });
     </script>
     <section id="setup-step4" class="setup-step">

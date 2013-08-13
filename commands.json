@@ -1,0 +1,4 @@
+[
+    {"id": 0, "name": "Start tracking", "description": "Start tracking the device"},
+    {"id": 1, "name": "Stop tracking", "description": "Stop tracking the device"}
+]
