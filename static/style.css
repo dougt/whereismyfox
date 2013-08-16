@@ -1,5 +1,43 @@
+html, body {
+  margin: 0;
+  padding: 10px;
+  font-family: Lucida Grande, sans-serif;
+}
+
+body {
+  background-color: #E79910;
+}
+
 h1 {
+  font-weight: bolder;
+  font-size: xx-large;
+  margin: auto;
   margin-bottom: 30px;
+  color: white;
+  width: 300px;
+}
+
+button {
+  background-color: #414141;
+  border: none;
+  border-radius: 3px;
+  color: white;
+  font-weight: bold;
+}
+
+#login {
+  text-align: center;
+}
+
+#persona-login {
+  border: none;
+  background: transparent;
+}
+
+#persona-login div {
+  background-image: url("img/persona-login.png");
+  width: 185px;
+  height: 25px;
 }
 
 #devices {
