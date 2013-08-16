@@ -327,6 +327,7 @@ func main() {
 	serveSingle("/install.html", "./static/install.html")
 	serveSingle("/app.html", "./app/index.html")
 	serveSingle("/app/commands.js", "./app/commands.js")
+	serveSingle("/app/persona_iframe.html", "./static/persona_iframe.html")
 	serveSingle("/style.css", "./static/style.css")
 	serveSingle("/style-app.css", "./static/style-app.css")
 	serveSingle("/style-common.css", "./static/style-common.css")
