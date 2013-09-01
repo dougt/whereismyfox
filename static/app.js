@@ -23,6 +23,28 @@ function renderDeviceTable(devices) {
     });
 }
 
+/*
+ * Takes an array of jQuery XHR requests, and returns a Promise that resolves
+ * when all of then succeed and rejects when any of them fails. The Promise
+ * resolves to an array, each element being the result of each request in the
+ * order they were passed.
+ *
+ * NOTE: jQuery.when() when called with just one promise (e.g. in the case
+ * where the user has only one device registered), passes the result of that
+ * promise to the associated callback, while for multiple devices, it passes
+ * a list.  This is stupid behaviour for our case.
+ *
+ */
+function URLs_every(deferreds) {
+    return $.when.apply(null, deferreds).then(function() {
+        if (deferreds.length == 1) {
+            return [arguments[0][0]];
+        } else {
+            return Array.prototype.slice.call(arguments).map(function(jqXHRResult) { return jqXHRResult[0]; });
+        }
+    });
+}
+
 function updateDevices() {
     $("#devices").html("Fetching list...");
 
@@ -35,27 +57,17 @@ function updateDevices() {
             return $.getJSON(url);
         });
 
-        $.when.apply(null, deviceRequests).then(function() {
-            var devices = [];
-
-            if (deviceRequests.length == 1) {
-                devices.push(arguments[0]);
-            } else {
-                for (var i = 0; i < arguments.length; i++) {
-                    devices.push(arguments[i][0]);
-                }
-            }
-
+        URLs_every(deviceRequests).then(function(devices) {
             var commandRequests = devices.map(function(device) {
                 return $.getJSON('/device/' + device.Id + '/command');
             });
 
-            $.when.apply(null, commandRequests).then(function() {
+            URLs_every(commandRequests).then(function(commands) {
                 for (var i = 0; i < devices.length; i++) {
-                    devices[i].commands = arguments[i];
+                    devices[i].commands = commands[i];
                     devices[i].id = i;
                 }
-
+                console.log(devices);
                 renderDeviceTable(devices);
             });
 
