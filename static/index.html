@@ -97,7 +97,11 @@
 
             $.when.apply(null, commandRequests).then(function() {
               for (var i = 0; i < devices.length; i++) {
-                devices[i].commands = arguments[i];
+                if (commandRequests.length == 1) {
+                  devices[i].commands = arguments[0];
+                } else {
+                  devices[i].commands = arguments[i][0];
+                }
               }
 
               renderDeviceTable(devices);
