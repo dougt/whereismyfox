@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"path"
 	"github.com/emicklei/go-restful"
 	"log"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -26,11 +26,11 @@ type CommandResponse struct {
 }
 
 func serveIndexHtml(w http.ResponseWriter, r *http.Request) {
-    http.ServeFile(w, r, path.Join(gServerConfig.ServerRoot, "static", "index.html"))
+	http.ServeFile(w, r, path.Join(gServerConfig.ServerRoot, "static", "index.html"))
 }
 
 func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
-    log.Println("is logged in?", IsLoggedIn(request.Request))
+	log.Println("is logged in?", IsLoggedIn(request.Request))
 	if !IsLoggedIn(request.Request) {
 		response.WriteError(http.StatusUnauthorized, nil)
 		return
@@ -247,11 +247,11 @@ func createDeviceWebService() *restful.WebService {
 		Doc("Retrieve all devices owned by a user").
 		Writes([]Device{}))
 
-    ws.
-        Route(ws.GET("/{device-id}").To(serveDevice).
-        Doc("Retrieve a device based on its id").
-        Param(ws.PathParameter("device-id", "The identifier for the device")).
-        Writes(Device{}))
+	ws.
+		Route(ws.GET("/{device-id}").To(serveDevice).
+		Doc("Retrieve a device based on its id").
+		Param(ws.PathParameter("device-id", "The identifier for the device")).
+		Writes(Device{}))
 
 	ws.
 		Route(ws.PUT("/").To(addDevice).
@@ -268,33 +268,33 @@ func createDeviceWebService() *restful.WebService {
 		Param(ws.QueryParameter("latitude", "The latitude where the device was observed")).
 		Param(ws.QueryParameter("longitude", "The longitude where the device was observed")))
 
-    ws.
-        Route(ws.GET("/{device-id}/command").To(serveCommandsByDevice).
-        Doc("List the commands available for a device").
-        Param(ws.PathParameter("device-id", "The identifier for the device")).
-        Writes([]CommandResponse{}))
+	ws.
+		Route(ws.GET("/{device-id}/command").To(serveCommandsByDevice).
+		Doc("List the commands available for a device").
+		Param(ws.PathParameter("device-id", "The identifier for the device")).
+		Writes([]CommandResponse{}))
 
-    ws.
-        Route(ws.PUT("/{device-id}/command").To(updateCommandsByDevice).
-        Consumes("application/json; charset=UTF-8").
-        Doc("Update the list of commands available for a device").
-        Param(ws.PathParameter("device-id", "The identifier for the device")).
-        Param(ws.QueryParameter("commands", "List of command ids supported by the device")))
+	ws.
+		Route(ws.PUT("/{device-id}/command").To(updateCommandsByDevice).
+		Consumes("application/json; charset=UTF-8").
+		Doc("Update the list of commands available for a device").
+		Param(ws.PathParameter("device-id", "The identifier for the device")).
+		Param(ws.QueryParameter("commands", "List of command ids supported by the device")))
 
-    ws.
-        Route(ws.POST("/{device-id}/command/{command-id}").To(triggerCommand).
-        Consumes("application/json; charset=UTF-8").
-        Doc("Trigger a command").
-        Param(ws.PathParameter("device-id", "The identifier for the device")).
-        Param(ws.PathParameter("command-id", "The identifier for the command")).
-        Param(ws.QueryParameter("parameters", "An object with values for parameters")))
+	ws.
+		Route(ws.POST("/{device-id}/command/{command-id}").To(triggerCommand).
+		Consumes("application/json; charset=UTF-8").
+		Doc("Trigger a command").
+		Param(ws.PathParameter("device-id", "The identifier for the device")).
+		Param(ws.PathParameter("command-id", "The identifier for the command")).
+		Param(ws.QueryParameter("parameters", "An object with values for parameters")))
 
 	// FIXME should this be under /device?
-    ws.
-        Route(ws.GET("/invocation/{token}").To(serveInvocation).
-        Doc("Get the invocation context of a command").
-        Param(ws.PathParameter("token", "The invocation identifier")).
-        Writes(CommandContext{}))
+	ws.
+		Route(ws.GET("/invocation/{token}").To(serveInvocation).
+		Doc("Get the invocation context of a command").
+		Param(ws.PathParameter("token", "The invocation identifier")).
+		Writes(CommandContext{}))
 
 	return ws
 }
@@ -329,8 +329,8 @@ func main() {
 		http.ServeFile(w, r, filename)
 	})
 
-    http.HandleFunc("/", serveIndexHtml)
-    http.HandleFunc("/index.html", serveIndexHtml)
+	http.HandleFunc("/", serveIndexHtml)
+	http.HandleFunc("/index.html", serveIndexHtml)
 	http.Handle("/static/", http.FileServer(http.Dir(gServerConfig.ServerRoot)))
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
