@@ -15,6 +15,7 @@ type ServerConfig struct {
 	CertFilename  string `json:"certFilename"`
 	KeyFilename   string `json:"keyFilename"`
 	SessionCookie string `json:"sessionCookie"`
+    ServerRoot  string `json:"serverRoot"`
 }
 
 var gServerConfig ServerConfig
