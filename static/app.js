@@ -13,14 +13,6 @@ function renderDeviceTable(devices) {
     });
 
     $("#devices").html(table);
-    $("#devices button").click(function() {
-        var select = $(this).parent().prev().children("select"),
-        options = select.children("option"),
-        idx = select.get(0).selectedIndex,
-        trigger = $(options[idx]).attr("data-trigger");
-
-        $.post(trigger);
-    });
 }
 
 /*
@@ -124,6 +116,15 @@ $("document").ready(function(){
         } else {
             loggedIn(res);
         }
+    });
+
+    // Use jQuery's delegation capability to monitor all button clicks, even in
+    // the future.
+    $("#devices").on("click", "button.device-execute-command", function(e) {
+        var select = $(this).parent().prev().children("select"),
+            option = select.children("option:selected");
+
+        $.post(option.data("trigger"));
     });
 });
 

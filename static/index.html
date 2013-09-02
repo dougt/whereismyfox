@@ -23,29 +23,29 @@
         {{#devices}}
         {{#first}}
         <tr>
-        <th>Device name<th>
-        <th>Last coordinates<th>
-        <tr>
+        <th>Device name</th>
+        <th>Last coordinates</th>
+        </tr>
         {{/first}}
         <tr>
-        <td>{{Name}}<td>
+        <td>{{Name}}</td>
         <td>
         <a href={{mapsURL}}{{Latitude}},{{Longitude}}
         target=_blank>
         ({{Latitude}}, {{Longitude}})
-        <a>
-        <td>
+        </a>
+        </td>
         <td>
         <select>
         {{#commands}}
-        <option data-trigger={{Trigger}}>{{Name}}</option>
+        <option data-trigger="{{Trigger}}">{{Name}}</option>
         {{/commands}}
-        <select>
+        </select>
+        </td>
         <td>
-        <td>
-            <button id="device-command-{{id}}">Do it!<button>
-        <tr>
-        <tr>
+            <button data-device-id="{{Id}}" class="device-execute-command">Do it!<button>
+        </td>
+        </tr>
         {{/devices}}
         {{^devices}}
         <tr><td>No devices found!<td><tr>
