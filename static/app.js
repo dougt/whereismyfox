@@ -38,7 +38,10 @@ function renderDeviceTable(devices) {
 function URLs_every(deferreds) {
     return $.when.apply(null, deferreds).then(function() {
         if (deferreds.length == 1) {
-            return [arguments[0][0]];
+            // In the single promise case, this function is passed three
+            // arguments similar to jqXHR.done(), of which the first is the
+            // response.
+            return [arguments[0]];
         } else {
             return Array.prototype.slice.call(arguments).map(function(jqXHRResult) { return jqXHRResult[0]; });
         }
