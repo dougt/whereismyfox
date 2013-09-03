@@ -76,7 +76,7 @@ func doLogin(verifierURL string, w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Bad Request."))
 	}
 
-	data := url.Values{"assertion": {assertion}, "audience": {"http://" + gServerConfig.PersonaName }}
+	data := url.Values{"assertion": {assertion}, "audience": {"http://" + gServerConfig.PersonaName}}
 
 	resp, err := http.PostForm(verifierURL, data)
 	if err != nil {

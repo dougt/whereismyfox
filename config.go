@@ -15,16 +15,17 @@ type ServerConfig struct {
 	CertFilename  string `json:"certFilename"`
 	KeyFilename   string `json:"keyFilename"`
 	SessionCookie string `json:"sessionCookie"`
+	PackagePath   string `json:"-"`
 }
 
 var gServerConfig ServerConfig
 
-func readConfig() {
+func readConfig(file string) {
 
 	var data []byte
 	var err error
 
-	data, err = ioutil.ReadFile("config.json")
+	data, err = ioutil.ReadFile(file)
 	if err != nil {
 		log.Println("Not configured.  Could not find config.json")
 		os.Exit(-1)

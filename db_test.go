@@ -158,9 +158,9 @@ func TestListCommandsForDevice(t *testing.T) {
 			t.Error("Failed to list commands: " + err.Error())
 		}
 
-		if len(commands) != i + 1 {
+		if len(commands) != i+1 {
 			t.Errorf("Wrong number of commands for device %d: %d", device.Id,
-			len(commands))
+				len(commands))
 		}
 	}
 }

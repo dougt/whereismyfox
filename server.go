@@ -1,10 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/emicklei/go-restful"
+	"go/build"
 	"log"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -24,14 +27,12 @@ type CommandResponse struct {
 	Trigger     string `json: "trigger"`
 }
 
-func serveSingle(pattern string, filename string) {
-	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		log.Println("serving file " + filename)
-		http.ServeFile(w, r, filename)
-	})
+func serveIndexHtml(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, path.Join(gServerConfig.PackagePath, "static", "index.html"))
 }
 
 func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+	log.Println("is logged in?", IsLoggedIn(request.Request))
 	if !IsLoggedIn(request.Request) {
 		response.WriteError(http.StatusUnauthorized, nil)
 		return
@@ -300,36 +301,43 @@ func createDeviceWebService() *restful.WebService {
 	return ws
 }
 
+func defaultBase(path string) string {
+	p, err := build.Default.Import(path, "", build.FindOnly)
+	log.Println(p)
+	if err != nil {
+		return "."
+	}
+	return p.Dir
+}
+
 func main() {
-	readConfig()
-	db, err := OpenDB("db.sqlite")
+	var packagePath = defaultBase("github.com/dougt/whereismyfox")
+	var configFile = flag.String("config", path.Join(packagePath, "config.json"), "Location of configuration file")
+	var dbFile = flag.String("db", path.Join(packagePath, "db.sqlite"), "Location of database")
+	flag.Parse()
+
+	readConfig(*configFile)
+	gServerConfig.PackagePath = packagePath
+
+	db, err := OpenDB(*dbFile)
 	if err != nil {
 		panic(err)
 	}
 
 	gDB = db
-	restful.Add(createDeviceWebService())
-
-	if err = populateCommandsDB(db, "commands.json"); err != nil {
+	if err = populateCommandsDB(db, path.Join(packagePath, "commands.json")); err != nil {
 		panic(err)
 	}
 
 	gPendingCommands = map[int64]CommandContext{}
+
+	restful.Add(createDeviceWebService())
 
 	// Persona handling
 	http.HandleFunc("/auth/check", loginCheckHandler)
 	http.HandleFunc("/auth/login", loginHandler)
 	http.HandleFunc("/auth/applogin", appLoginHandler)
 	http.HandleFunc("/auth/logout", logoutHandler)
-
-	serveSingle("/", "./static/index.html")
-	serveSingle("/index.html", "./static/index.html")
-	serveSingle("/app/persona_iframe.html", "./static/persona_iframe.html")
-	serveSingle("/style.css", "./static/style.css")
-	serveSingle("/logos/64.png", "./static/logos/64.png")
-	serveSingle("/logos/128.png", "./static/logos/128.png")
-	serveSingle("/img/persona-login.png", "./static/img/persona-login.png")
-	serveSingle("/lib/mustache.js", "./static/lib/mustache.js")
 
 	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
 		filename := "./app/manifest.webapp"
@@ -338,6 +346,11 @@ func main() {
 		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
 		http.ServeFile(w, r, filename)
 	})
+
+	http.HandleFunc("/", serveIndexHtml)
+	http.HandleFunc("/index.html", serveIndexHtml)
+	log.Println(path.Join(packagePath, "static"))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path.Join(packagePath, "static")))))
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 
