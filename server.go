@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/emicklei/go-restful"
+	"go/build"
 	"log"
 	"net/http"
 	"path"
@@ -26,7 +28,7 @@ type CommandResponse struct {
 }
 
 func serveIndexHtml(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, path.Join(gServerConfig.ServerRoot, "static", "index.html"))
+	http.ServeFile(w, r, path.Join(gServerConfig.PackagePath, "static", "index.html"))
 }
 
 func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
@@ -299,15 +301,31 @@ func createDeviceWebService() *restful.WebService {
 	return ws
 }
 
+func defaultBase(path string) string {
+	p, err := build.Default.Import(path, "", build.FindOnly)
+	log.Println(p)
+	if err != nil {
+		return "."
+	}
+	return p.Dir
+}
+
 func main() {
-	readConfig()
-	db, err := OpenDB("db.sqlite")
+	var packagePath = defaultBase("github.com/dougt/whereismyfox")
+	var configFile = flag.String("config", path.Join(packagePath, "config.json"), "Location of configuration file")
+	var dbFile = flag.String("db", path.Join(packagePath, "db.sqlite"), "Location of database")
+	flag.Parse()
+
+	readConfig(*configFile)
+	gServerConfig.PackagePath = packagePath
+
+	db, err := OpenDB(*dbFile)
 	if err != nil {
 		panic(err)
 	}
 
 	gDB = db
-	if err = populateCommandsDB(db, "commands.json"); err != nil {
+	if err = populateCommandsDB(db, path.Join(packagePath, "commands.json")); err != nil {
 		panic(err)
 	}
 
@@ -331,7 +349,8 @@ func main() {
 
 	http.HandleFunc("/", serveIndexHtml)
 	http.HandleFunc("/index.html", serveIndexHtml)
-	http.Handle("/static/", http.FileServer(http.Dir(gServerConfig.ServerRoot)))
+	log.Println(path.Join(packagePath, "static"))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path.Join(packagePath, "static")))))
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 
