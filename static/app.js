@@ -11,7 +11,6 @@ function renderDeviceTable(devices) {
         devices: devices,
         mapsURL: "https://maps.google.com/maps?q="
     });
-    console.log(table);
 
     $("#devices").html(table);
     $("#devices button").click(function() {
@@ -54,6 +53,7 @@ function updateDevices() {
             $.when.apply(null, commandRequests).then(function() {
                 for (var i = 0; i < devices.length; i++) {
                     devices[i].commands = arguments[i];
+                    devices[i].id = i;
                 }
 
                 renderDeviceTable(devices);
