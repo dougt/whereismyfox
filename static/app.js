@@ -60,7 +60,6 @@ function updateDevices() {
             URLs_every(commandRequests).then(function(commands) {
                 for (var i = 0; i < devices.length; i++) {
                     devices[i].commands = commands[i];
-                    devices[i].id = i;
                 }
                 console.log(devices);
                 renderDeviceTable(devices);
