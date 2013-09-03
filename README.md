@@ -1,21 +1,25 @@
-Install dependencies:
+This is the server and web interface for the Where Is My Fox? application.
 
-	go get github.com/emicklei/go-restful
-	go get github.com/mattn/go-sqlite3
-	go get github.com/gorilla/sessions
+The server is written in [Go](http://golang.org).
 
-Get the code
+Install:
 
-	go get github.com/dougt/whereismyfox
+    # set a valid GOPATH first. See http://golang.org/doc/code.html
+    cd $GOPATH
+    go get github.com/dougt/whereismyfox
+    go install github.com/dougt/whereismyfox
 
-This repository contains the server code in the server/ directory,
-and the app and main site in the app/ and static/ directories. This is
-a nuisance because the go tool expects .go files to reside in the root
-of the repository, and so a simple go build won't work to build the server.
-Just rely on the build.sh script for the time being:
+Configure:
 
-	cd $GOPATH/src/github.com/dougt/whereismyfox && scripts/build.sh
-	./whereismyfox # run the server
+    # Copy the example config
+    cd $GOPATH
+    mkdir conf
+    cp src/github.com/dougt/whereismyfox/config-example.json conf/whereismyfox.json
+    # edit conf/whereismyfox.json
 
-In the future the server code should probably be split in a different
-repository.
+Run:
+
+    cd $GOPATH
+    ./bin/whereismyfox -config conf/whereismyfox.json -db whereismyfox.sqlite
+
+To contribute, fork and send a pull request.
