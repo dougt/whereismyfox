@@ -23,6 +23,3 @@ _testmain.go
 
 whereismyfox$
 config.json
-
-# Third party code
-server/src/github.com
