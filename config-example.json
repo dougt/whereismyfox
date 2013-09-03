@@ -5,5 +5,5 @@
   "useTLS"           : false,
   "certFilename"     : "",
   "keyFilename"      : "",
-  "sessionCookie"    : "changeme",
+  "sessionCookie"    : "changeme"
 }
