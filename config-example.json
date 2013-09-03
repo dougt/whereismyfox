@@ -6,5 +6,4 @@
   "certFilename"     : "",
   "keyFilename"      : "",
   "sessionCookie"    : "changeme",
-  "serverRoot"       : ".."
 }
