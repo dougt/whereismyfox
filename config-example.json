@@ -5,6 +5,5 @@
   "useTLS"           : false,
   "certFilename"     : "",
   "keyFilename"      : "",
-  "sessionCookie"    : "changeme",
-  "serverRoot"       : ".."
+  "sessionCookie"    : "changeme"
 }
