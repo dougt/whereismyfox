@@ -1,10 +1,12 @@
 package main
 
 import (
+	"code.google.com/p/go.crypto/bcrypt"
 	"flag"
 	"fmt"
 	"github.com/emicklei/go-restful"
 	"go/build"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
@@ -15,6 +17,8 @@ import (
 
 var gDB *DB
 var gPendingCommands map[int64]CommandContext
+
+const kBCRYPT_COST = 12
 
 type CommandContext struct {
 	CommandId int64           `json: "commandid"`
@@ -69,7 +73,20 @@ func addDevice(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	device, err := gDB.AddDevice(GetLoginName(request.Request), name, endpoint)
+	// TODO don't allow spaces
+	var smsPin string
+	if indevice.SMSPin != "" {
+		toHash := []byte(indevice.SMSPin)
+		hashed, err := bcrypt.GenerateFromPassword(toHash, kBCRYPT_COST);
+		if err != nil {
+			response.WriteError(http.StatusInternalServerError, nil)
+			return
+		}
+
+		smsPin = string(hashed)
+	}
+
+	device, err := gDB.AddDevice(GetLoginName(request.Request), name, endpoint, smsPin)
 	if err == nil {
 		response.WriteEntity(*device)
 	} else {
@@ -178,6 +195,24 @@ func serveInvocation(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(context)
 }
 
+func sendCommandToDevice(device Device, context CommandContext) error {
+	token := int64(time.Now().Unix())
+	gPendingCommands[token] = context
+
+	// Issue push notification to device
+	body := fmt.Sprintf("version=%d", token)
+	pushRequest, err := http.NewRequest("PUT", device.Endpoint, strings.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	pushRequest.Header["Content-Type"] = []string{"application/x-www-form-urlencoded"}
+
+	var client http.Client
+	_, err = client.Do(pushRequest)
+	return err
+}
+
 func triggerCommand(request *restful.Request, response *restful.Response) {
 	device := getDeviceForRequest(request, response)
 	if device == nil {
@@ -206,7 +241,6 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	token := int64(time.Now().Unix())
 	context := CommandContext{CommandId: cmdid}
 
 	// Store pending arguments, if any
@@ -216,23 +250,83 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 			return
 		}
 	}
-	gPendingCommands[token] = context
 
-	// Issue push notification to device
-	body := fmt.Sprintf("version=%d", token)
-	pushRequest, err := http.NewRequest("PUT", device.Endpoint, strings.NewReader(body))
+	if err = sendCommandToDevice(*device, context); err != nil {
+		response.WriteError(http.StatusInternalServerError, nil)
+		return
+	}
+}
+
+func triggerCommandViaSMS(request *restful.Request, response *restful.Response) {
+	// TODO arguments?
+	// TODO refactor, too much common logic with triggerCommand
+
+	// parse SMS message of the form "email pin command"
+	var sms string
+	if body, err := ioutil.ReadAll(request.Request.Body); err != nil {
+		response.WriteError(http.StatusBadRequest, nil)
+		return
+	} else {
+		sms = string(body)
+	}
+
+	parts := strings.SplitAfterN(sms, " ", 3)
+	if len(parts) != 3 {
+		response.WriteError(http.StatusBadRequest, nil)
+		return
+	}
+
+	email := parts[0]
+	smsPin := []byte(parts[1])
+	commandName := parts[2]
+
+	// find the device to use based on the sms pin
+	devices, err := gDB.ListDevicesForUser(email)
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, nil)
 		return
 	}
 
-	pushRequest.Header["Content-Type"] = []string{"application/x-www-form-urlencoded"}
+	var device *Device
+	for _, d := range devices {
+		if bcrypt.CompareHashAndPassword([]byte(d.SMSPin), smsPin) == nil {
+			// found device corresponding to sms pin
+			device = &d
+			break
+		}
+	}
 
-	var client http.Client
-	_, err = client.Do(pushRequest)
+	if device == nil {
+		response.WriteError(http.StatusBadRequest, nil)
+		return
+	}
+
+	// find the command
+	commands, err := gDB.ListCommandsForDevice(device)
 	if err != nil {
 		response.WriteError(http.StatusInternalServerError, nil)
+		return
 	}
+
+	var command *Command
+	for _, c := range commands {
+		if strings.ToLower(c.Name) == strings.ToLower(commandName) {
+			command = c
+		}
+	}
+
+	if command == nil {
+		response.WriteError(http.StatusBadRequest, nil)
+		return
+	}
+
+	context := CommandContext{CommandId: command.Id}
+	if err = sendCommandToDevice(*device, context); err != nil {
+		response.WriteError(http.StatusInternalServerError, nil)
+		return
+	}
+
+	// TODO reply SMS?
 }
 
 func createDeviceWebService() *restful.WebService {
@@ -290,6 +384,10 @@ func createDeviceWebService() *restful.WebService {
 		Param(ws.PathParameter("device-id", "The identifier for the device")).
 		Param(ws.PathParameter("command-id", "The identifier for the command")).
 		Param(ws.QueryParameter("parameters", "An object with values for parameters")))
+
+	ws.
+		Route(ws.POST("/command/sms").To(triggerCommandViaSMS).
+		Doc("Trigger a command using an SMS message"))
 
 	// FIXME should this be under /device?
 	ws.

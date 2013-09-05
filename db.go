@@ -19,6 +19,7 @@ type Device struct {
 	Latitude  float64 `json: "latitude"`
 	Longitude float64 `json: "longitude"`
 	Timestamp string  `json: "timestamp"`
+	SMSPin    string  `json: "smspin"`
 }
 
 type DB struct {
@@ -36,7 +37,7 @@ func OpenDB(dbpath string) (*DB, error) {
 		(id integer primary key autoincrement,
 		user text, name text, endpoint text unique,
 		latitude float default 0, longitude float default 0,
-		timestamp text default "");`)
+		timestamp text default "", sms_pin text default "");`)
 
 	if err != nil {
 		return nil, err
@@ -80,17 +81,17 @@ func (self DB) Close() {
 	self.connection = nil
 }
 
-func (self DB) AddDevice(user, name, endpoint string) (*Device, error) {
+func (self DB) AddDevice(user, name, endpoint, smsPin string) (*Device, error) {
 	res, err := self.connection.Exec(
-		`insert into devices(user, name, endpoint) values(?, ?, ?)`,
-		user, name, endpoint)
+		`insert into devices(user, name, endpoint, sms_pin) values(?, ?, ?, ?)`,
+		user, name, endpoint, smsPin)
 
 	if err != nil {
 		return nil, err
 	}
 
 	id, _ := res.LastInsertId()
-	return &Device{Id: id, Name: name, User: user, Endpoint: endpoint}, nil
+	return &Device{Id: id, Name: name, User: user, Endpoint: endpoint, SMSPin: smsPin}, nil
 }
 
 func (self DB) AddCommand(id int64, name, description string) (*Command, error) {
@@ -133,14 +134,14 @@ func (self DB) UpdateCommandsForDevice(device int64, commands []int64) error {
 
 func (self DB) GetDeviceById(id int64) (*Device, error) {
 	row := self.connection.QueryRow(
-		`select id, user, name, endpoint, latitude, longitude, timestamp
-		from devices where id=?`, id)
+		`select id, user, name, endpoint, latitude, longitude, timestamp,
+		sms_pin from devices where id=?`, id)
 
 	d := Device{}
 	err := row.Scan(
 		&d.Id, &d.User, &d.Name,
 		&d.Endpoint, &d.Latitude,
-		&d.Longitude, &d.Timestamp)
+		&d.Longitude, &d.Timestamp, &d.SMSPin)
 
 	if err != nil {
 		return nil, err

@@ -4,6 +4,8 @@ import "io/ioutil"
 import "os"
 import "testing"
 
+var gTestSMSPin = "$2a$12$pmUSWNZJMwmvtBUa0bANsuR8XJpUUAKpG0qdP57foTjCOc7F4lA1e"
+
 /* The test devices we're going to use.
  * The values for Latitude, Longitude and Timestamp are the ones
  * we expect to find right after adding them to the database for the
@@ -20,7 +22,7 @@ var gTestDevices = []Device{
 
 	{Id: 3, User: "ggoncalves@mozilla.com", Name: "test-device3",
 		Endpoint: "http://push.mozilla.com/f8303f58-f486-4ed7-8dd7-3a741837ff51",
-		Latitude: 0, Longitude: 0, Timestamp: ""},
+		Latitude: 0, Longitude: 0, Timestamp: "", SMSPin: gTestSMSPin},
 }
 
 var gTestCommands = []Command{
@@ -47,7 +49,7 @@ func initTestDatabase(t *testing.T) (*DB, func()) {
 	}
 
 	for i, device := range gTestDevices {
-		added, err := db.AddDevice(device.User, device.Name, device.Endpoint)
+		added, err := db.AddDevice(device.User, device.Name, device.Endpoint, device.SMSPin)
 
 		if err != nil {
 			t.Log("Failed to add device: " + err.Error())
