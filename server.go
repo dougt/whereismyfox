@@ -14,6 +14,7 @@ import (
 )
 
 var gDB *DB
+var gPersona PersonaHandler
 var gPendingCommands map[int64]CommandContext
 
 type CommandContext struct {
@@ -32,9 +33,8 @@ func serveIndexHtml(w http.ResponseWriter, r *http.Request) {
 }
 
 func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
-	log.Println("is logged in?", IsLoggedIn(request.Request))
-	if !IsLoggedIn(request.Request) {
-		response.WriteError(http.StatusUnauthorized, nil)
+	if !gPersona.IsLoggedIn(request.Request) {
+		response.WriteErrorString(http.StatusUnauthorized, "Not logged in")
 		return
 	}
 
@@ -44,16 +44,16 @@ func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chai
 func getDeviceForRequest(request *restful.Request, response *restful.Response) *Device {
 	id, err := strconv.ParseInt(request.PathParameter("device-id"), 10, 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse device")
 		return nil
 	}
 
 	device, err := gDB.GetDeviceById(id)
-	if device != nil && device.User == GetLoginName(request.Request) {
+	if device != nil && device.User == gPersona.GetLoginName(request.Request) {
 		return device
 	}
 
-	response.WriteError(http.StatusNotFound, nil)
+	response.WriteErrorString(http.StatusNotFound, "Device not found")
 	return nil
 }
 
@@ -65,20 +65,20 @@ func addDevice(request *restful.Request, response *restful.Response) {
 	endpoint := indevice.Endpoint
 
 	if name == "" || endpoint == "" {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "No name or endpoint")
 		return
 	}
 
-	device, err := gDB.AddDevice(GetLoginName(request.Request), name, endpoint)
+	device, err := gDB.AddDevice(gPersona.GetLoginName(request.Request), name, endpoint)
 	if err == nil {
 		response.WriteEntity(*device)
 	} else {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to add device")
 	}
 }
 
 func serveDevicesByUser(request *restful.Request, response *restful.Response) {
-	devices, _ := gDB.ListDevicesForUser(GetLoginName(request.Request))
+	devices, _ := gDB.ListDevicesForUser(gPersona.GetLoginName(request.Request))
 
 	urls := []string{}
 	for _, d := range devices {
@@ -102,13 +102,13 @@ func toCommandResponse(device *Device, command *Command) CommandResponse {
 func serveCommandsByDevice(request *restful.Request, response *restful.Response) {
 	device := getDeviceForRequest(request, response)
 	if device == nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "No device in request")
 		return
 	}
 
 	commands, err := gDB.ListCommandsForDevice(device)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to retrieve commands")
 		return
 	}
 
@@ -128,12 +128,12 @@ func updateCommandsByDevice(request *restful.Request, response *restful.Response
 
 	commands := []int64{}
 	if err := request.ReadEntity(&commands); err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse commands")
 		return
 	}
 
 	if err := gDB.UpdateCommandsForDevice(device.Id, commands); err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to update commands")
 		return
 	}
 }
@@ -146,31 +146,31 @@ func updateDeviceLocation(request *restful.Request, response *restful.Response) 
 
 	latitude, err := strconv.ParseFloat(request.QueryParameter("latitude"), 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse latitude")
 	}
 
 	longitude, err := strconv.ParseFloat(request.QueryParameter("longitude"), 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse longitude")
 	}
 
 	err = gDB.UpdateDeviceLocation(device, latitude, longitude)
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to update location")
 	}
 }
 
 func serveInvocation(request *restful.Request, response *restful.Response) {
 	token, err := strconv.ParseInt(request.PathParameter("token"), 10, 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse invocation")
 		return
 	}
 
 	// TODO check whether invocation was actually intended for device? how?
 	context, exists := gPendingCommands[token]
 	if !exists {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to find invocation")
 		return
 	}
 
@@ -186,7 +186,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 
 	cmdid, err := strconv.ParseInt(request.PathParameter("command-id"), 10, 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse command")
 		return
 	}
 
@@ -202,7 +202,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	}
 
 	if implements == false {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "No such command for device")
 		return
 	}
 
@@ -212,7 +212,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	// Store pending arguments, if any
 	if request.Request.ContentLength != 0 {
 		if err = request.ReadEntity(&context.Arguments); err != nil {
-			response.WriteError(http.StatusBadRequest, nil)
+			response.WriteErrorString(http.StatusBadRequest, "Failed to parse arguments")
 			return
 		}
 	}
@@ -222,7 +222,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	body := fmt.Sprintf("version=%d", token)
 	pushRequest, err := http.NewRequest("PUT", device.Endpoint, strings.NewReader(body))
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to push command")
 		return
 	}
 
@@ -231,7 +231,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	var client http.Client
 	_, err = client.Do(pushRequest)
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to push command")
 	}
 }
 
@@ -257,7 +257,7 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.PUT("/").To(addDevice).
-		Consumes("application/json; charset=UTF-8").
+		Consumes("application/json").
 		Doc("Add a device").
 		Param(ws.QueryParameter("name", "The name for the device")).
 		Param(ws.QueryParameter("endpoint", "The push endpoint for the device")).
@@ -265,7 +265,7 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.POST("/location/{device-id}").To(updateDeviceLocation).
-		Consumes("application/x-www-form-urlencoded; charset=UTF-8").
+		Consumes("application/x-www-form-urlencoded").
 		Doc("Update a device's latitude and longitude").
 		Param(ws.QueryParameter("latitude", "The latitude where the device was observed")).
 		Param(ws.QueryParameter("longitude", "The longitude where the device was observed")))
@@ -278,14 +278,14 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.PUT("/{device-id}/command").To(updateCommandsByDevice).
-		Consumes("application/json; charset=UTF-8").
+		Consumes("application/json").
 		Doc("Update the list of commands available for a device").
 		Param(ws.PathParameter("device-id", "The identifier for the device")).
 		Param(ws.QueryParameter("commands", "List of command ids supported by the device")))
 
 	ws.
 		Route(ws.POST("/{device-id}/command/{command-id}").To(triggerCommand).
-		Consumes("application/json; charset=UTF-8").
+		Consumes("application/json").
 		Doc("Trigger a command").
 		Param(ws.PathParameter("device-id", "The identifier for the device")).
 		Param(ws.PathParameter("command-id", "The identifier for the command")).
@@ -301,6 +301,34 @@ func createDeviceWebService() *restful.WebService {
 	return ws
 }
 
+func setupPersonaHandlers() {
+	gPersona = NewPersonaHandler(gServerConfig.PersonaName, gServerConfig.SessionCookie)
+	http.HandleFunc("/auth/check", func(w http.ResponseWriter, r *http.Request) {
+		if gPersona.IsLoggedIn(r) {
+			w.Write([]byte("ok"))
+			return
+		}
+	})
+	http.HandleFunc("/auth/login", makePersonaLoginHandler("https://verifier.login.persona.org/verify"))
+	http.HandleFunc("/auth/applogin", makePersonaLoginHandler("https://firefoxos.persona.org/verify"))
+	http.HandleFunc("/auth/logout", gPersona.Logout)
+
+	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
+		filename := "./app/manifest.webapp"
+		log.Println("serving manifest from " + filename)
+
+		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
+		http.ServeFile(w, r, filename)
+	})
+}
+
+func setupStaticHandlers(packagePath string) {
+	http.HandleFunc("/", serveIndexHtml)
+	http.HandleFunc("/index.html", serveIndexHtml)
+	log.Println(path.Join(packagePath, "static"))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path.Join(packagePath, "static")))))
+}
+
 func defaultBase(path string) string {
 	p, err := build.Default.Import(path, "", build.FindOnly)
 	log.Println(p)
@@ -308,6 +336,19 @@ func defaultBase(path string) string {
 		return "."
 	}
 	return p.Dir
+}
+
+// Persona's verifier URL is different for Firefox OS and Firefox Desktop
+func makePersonaLoginHandler(verifierURL string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := gPersona.Login(verifierURL, w, r)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(err.Error()))
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}
 }
 
 func main() {
@@ -332,25 +373,8 @@ func main() {
 	gPendingCommands = map[int64]CommandContext{}
 
 	restful.Add(createDeviceWebService())
-
-	// Persona handling
-	http.HandleFunc("/auth/check", loginCheckHandler)
-	http.HandleFunc("/auth/login", loginHandler)
-	http.HandleFunc("/auth/applogin", appLoginHandler)
-	http.HandleFunc("/auth/logout", logoutHandler)
-
-	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
-		filename := "./app/manifest.webapp"
-		log.Println("serving manifest from " + filename)
-
-		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
-		http.ServeFile(w, r, filename)
-	})
-
-	http.HandleFunc("/", serveIndexHtml)
-	http.HandleFunc("/index.html", serveIndexHtml)
-	log.Println(path.Join(packagePath, "static"))
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path.Join(packagePath, "static")))))
+	setupPersonaHandlers()
+	setupStaticHandlers(packagePath)
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 
