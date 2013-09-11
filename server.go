@@ -14,6 +14,7 @@ import (
 )
 
 var gDB *DB
+var gPersona PersonaHandler
 var gPendingCommands map[int64]CommandContext
 
 type CommandContext struct {
@@ -32,7 +33,7 @@ func serveIndexHtml(w http.ResponseWriter, r *http.Request) {
 }
 
 func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
-	if !IsLoggedIn(request.Request) {
+	if !gPersona.IsLoggedIn(request.Request) {
 		response.WriteErrorString(http.StatusUnauthorized, "Not logged in")
 		return
 	}
@@ -48,7 +49,7 @@ func getDeviceForRequest(request *restful.Request, response *restful.Response) *
 	}
 
 	device, err := gDB.GetDeviceById(id)
-	if device != nil && device.User == GetLoginName(request.Request) {
+	if device != nil && device.User == gPersona.GetLoginName(request.Request) {
 		return device
 	}
 
@@ -68,7 +69,7 @@ func addDevice(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	device, err := gDB.AddDevice(GetLoginName(request.Request), name, endpoint)
+	device, err := gDB.AddDevice(gPersona.GetLoginName(request.Request), name, endpoint)
 	if err == nil {
 		response.WriteEntity(*device)
 	} else {
@@ -77,7 +78,7 @@ func addDevice(request *restful.Request, response *restful.Response) {
 }
 
 func serveDevicesByUser(request *restful.Request, response *restful.Response) {
-	devices, _ := gDB.ListDevicesForUser(GetLoginName(request.Request))
+	devices, _ := gDB.ListDevicesForUser(gPersona.GetLoginName(request.Request))
 
 	urls := []string{}
 	for _, d := range devices {
@@ -300,6 +301,34 @@ func createDeviceWebService() *restful.WebService {
 	return ws
 }
 
+func setupPersonaHandlers() {
+	gPersona = NewPersonaHandler(gServerConfig.PersonaName, gServerConfig.SessionCookie)
+	http.HandleFunc("/auth/check", func(w http.ResponseWriter, r *http.Request) {
+		if gPersona.IsLoggedIn(r) {
+			w.Write([]byte("ok"))
+			return
+		}
+	})
+	http.HandleFunc("/auth/login", makePersonaLoginHandler("https://verifier.login.persona.org/verify"))
+	http.HandleFunc("/auth/applogin", makePersonaLoginHandler("https://firefoxos.persona.org/verify"))
+	http.HandleFunc("/auth/logout", gPersona.Logout)
+
+	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
+		filename := "./app/manifest.webapp"
+		log.Println("serving manifest from " + filename)
+
+		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
+		http.ServeFile(w, r, filename)
+	})
+}
+
+func setupStaticHandlers(packagePath string) {
+	http.HandleFunc("/", serveIndexHtml)
+	http.HandleFunc("/index.html", serveIndexHtml)
+	log.Println(path.Join(packagePath, "static"))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path.Join(packagePath, "static")))))
+}
+
 func defaultBase(path string) string {
 	p, err := build.Default.Import(path, "", build.FindOnly)
 	log.Println(p)
@@ -307,6 +336,19 @@ func defaultBase(path string) string {
 		return "."
 	}
 	return p.Dir
+}
+
+// Persona's verifier URL is different for Firefox OS and Firefox Desktop
+func makePersonaLoginHandler(verifierURL string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := gPersona.Login(verifierURL, w, r)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(err.Error()))
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}
 }
 
 func main() {
@@ -331,25 +373,8 @@ func main() {
 	gPendingCommands = map[int64]CommandContext{}
 
 	restful.Add(createDeviceWebService())
-
-	// Persona handling
-	http.HandleFunc("/auth/check", loginCheckHandler)
-	http.HandleFunc("/auth/login", loginHandler)
-	http.HandleFunc("/auth/applogin", appLoginHandler)
-	http.HandleFunc("/auth/logout", logoutHandler)
-
-	http.HandleFunc("/manifest.webapp", func(w http.ResponseWriter, r *http.Request) {
-		filename := "./app/manifest.webapp"
-		log.Println("serving manifest from " + filename)
-
-		w.Header()["Content-Type"] = []string{"application/x-web-app-manifest+json"}
-		http.ServeFile(w, r, filename)
-	})
-
-	http.HandleFunc("/", serveIndexHtml)
-	http.HandleFunc("/index.html", serveIndexHtml)
-	log.Println(path.Join(packagePath, "static"))
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path.Join(packagePath, "static")))))
+	setupPersonaHandlers()
+	setupStaticHandlers(packagePath)
 
 	log.Println("Listening on", gServerConfig.Hostname+":"+gServerConfig.Port)
 

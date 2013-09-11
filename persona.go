@@ -10,8 +10,6 @@ import (
 	"net/url"
 )
 
-var store = sessions.NewCookieStore([]byte(gServerConfig.SessionCookie))
-
 type PersonaResponse struct {
 	Status   string `json: "status"`
 	Email    string `json: "email"`
@@ -21,14 +19,31 @@ type PersonaResponse struct {
 	Reason   string `json: "reason,omitempty"`
 }
 
-func IsLoggedIn(r *http.Request) bool {
-	session, _ := store.Get(r, "persona-session")
+type PersonaHandler interface {
+	IsLoggedIn(r *http.Request) bool
+	GetLoginName(r *http.Request) string
+	Login(verifierURL string, w http.ResponseWriter, r *http.Request) error
+	Logout(w http.ResponseWriter, r *http.Request)
+}
+
+type Persona struct {
+	hostname string
+	store    *sessions.CookieStore
+}
+
+func NewPersonaHandler(hostname, cookie string) PersonaHandler {
+	store := sessions.NewCookieStore([]byte(cookie))
+	return Persona{hostname, store}
+}
+
+func (self Persona) IsLoggedIn(r *http.Request) bool {
+	session, _ := self.store.Get(r, "persona-session")
 	email := session.Values["email"]
 	return email != nil
 }
 
-func GetLoginName(r *http.Request) string {
-	session, _ := store.Get(r, "persona-session")
+func (self Persona) GetLoginName(r *http.Request) string {
+	session, _ := self.store.Get(r, "persona-session")
 	email := session.Values["email"]
 
 	if str, ok := email.(string); ok {
@@ -37,78 +52,45 @@ func GetLoginName(r *http.Request) string {
 	return ""
 }
 
-func loginCheckHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "persona-session")
-	email := session.Values["email"]
-	if email != nil {
-		fmt.Fprintf(w, email.(string))
-	} else {
-		fmt.Fprintf(w, "")
-	}
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "persona-session")
+func (self Persona) Logout(w http.ResponseWriter, r *http.Request) {
+	session, _ := self.store.Get(r, "persona-session")
 	session.Values["email"] = nil
 	session.Save(r, w)
-	w.Write([]byte("OK"))
 }
 
-func appLoginHandler(w http.ResponseWriter, r *http.Request) {
-	doLogin("https://firefoxos.persona.org/verify", w, r)
-}
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	doLogin("https://verifier.login.persona.org/verify", w, r)
-}
-
-func doLogin(verifierURL string, w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
-	}
-
+func (self Persona) Login(verifierURL string, w http.ResponseWriter, r *http.Request) error {
 	assertion := r.FormValue("assertion")
-
 	if assertion == "" {
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
+		return fmt.Errorf("Assertion not provided")
 	}
 
-	data := url.Values{"assertion": {assertion}, "audience": {"http://" + gServerConfig.PersonaName}}
+	form := url.Values{
+		"assertion": {assertion},
+		"audience": {"http://" + self.hostname }}
 
-	resp, err := http.PostForm(verifierURL, data)
+	vr, err := http.PostForm(verifierURL, form)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
+		return fmt.Errorf("Failed to verify: " + err.Error())
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(vr.Body)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
+		return fmt.Errorf("Failed to read verifier's response")
 	}
 
 	pr := &PersonaResponse{}
-	err = json.Unmarshal(body, pr)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request."))
+	if err = json.Unmarshal(body, pr); err != nil {
+		return fmt.Errorf("Failed to unmarshal verifier's response")
 	}
 
 	if pr.Status != "okay" {
 		log.Println("Persona failed to verify: " + pr.Reason)
-		w.WriteHeader(400)
-		w.Write([]byte("Bad Request"))
+		return fmt.Errorf("Persona failed to verify")
 	}
 
-	session, _ := store.Get(r, "persona-session")
+	session, _ := self.store.Get(r, "persona-session")
 	session.Values["email"] = pr.Email
 	session.Save(r, w)
 
-	w.Write(body)
+	return nil
 }
