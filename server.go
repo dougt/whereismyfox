@@ -257,7 +257,7 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.PUT("/").To(addDevice).
-		Consumes("application/json; charset=UTF-8").
+		Consumes("application/json").
 		Doc("Add a device").
 		Param(ws.QueryParameter("name", "The name for the device")).
 		Param(ws.QueryParameter("endpoint", "The push endpoint for the device")).
@@ -265,7 +265,7 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.POST("/location/{device-id}").To(updateDeviceLocation).
-		Consumes("application/x-www-form-urlencoded; charset=UTF-8").
+		Consumes("application/x-www-form-urlencoded").
 		Doc("Update a device's latitude and longitude").
 		Param(ws.QueryParameter("latitude", "The latitude where the device was observed")).
 		Param(ws.QueryParameter("longitude", "The longitude where the device was observed")))
@@ -278,14 +278,14 @@ func createDeviceWebService() *restful.WebService {
 
 	ws.
 		Route(ws.PUT("/{device-id}/command").To(updateCommandsByDevice).
-		Consumes("application/json; charset=UTF-8").
+		Consumes("application/json").
 		Doc("Update the list of commands available for a device").
 		Param(ws.PathParameter("device-id", "The identifier for the device")).
 		Param(ws.QueryParameter("commands", "List of command ids supported by the device")))
 
 	ws.
 		Route(ws.POST("/{device-id}/command/{command-id}").To(triggerCommand).
-		Consumes("application/json; charset=UTF-8").
+		Consumes("application/json").
 		Doc("Trigger a command").
 		Param(ws.PathParameter("device-id", "The identifier for the device")).
 		Param(ws.PathParameter("command-id", "The identifier for the command")).
