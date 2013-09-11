@@ -32,9 +32,8 @@ func serveIndexHtml(w http.ResponseWriter, r *http.Request) {
 }
 
 func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
-	log.Println("is logged in?", IsLoggedIn(request.Request))
 	if !IsLoggedIn(request.Request) {
-		response.WriteError(http.StatusUnauthorized, nil)
+		response.WriteErrorString(http.StatusUnauthorized, "Not logged in")
 		return
 	}
 
@@ -44,7 +43,7 @@ func ensureIsLoggedIn(request *restful.Request, response *restful.Response, chai
 func getDeviceForRequest(request *restful.Request, response *restful.Response) *Device {
 	id, err := strconv.ParseInt(request.PathParameter("device-id"), 10, 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse device")
 		return nil
 	}
 
@@ -53,7 +52,7 @@ func getDeviceForRequest(request *restful.Request, response *restful.Response) *
 		return device
 	}
 
-	response.WriteError(http.StatusNotFound, nil)
+	response.WriteErrorString(http.StatusNotFound, "Device not found")
 	return nil
 }
 
@@ -65,7 +64,7 @@ func addDevice(request *restful.Request, response *restful.Response) {
 	endpoint := indevice.Endpoint
 
 	if name == "" || endpoint == "" {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "No name or endpoint")
 		return
 	}
 
@@ -73,7 +72,7 @@ func addDevice(request *restful.Request, response *restful.Response) {
 	if err == nil {
 		response.WriteEntity(*device)
 	} else {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to add device")
 	}
 }
 
@@ -102,13 +101,13 @@ func toCommandResponse(device *Device, command *Command) CommandResponse {
 func serveCommandsByDevice(request *restful.Request, response *restful.Response) {
 	device := getDeviceForRequest(request, response)
 	if device == nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "No device in request")
 		return
 	}
 
 	commands, err := gDB.ListCommandsForDevice(device)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to retrieve commands")
 		return
 	}
 
@@ -128,12 +127,12 @@ func updateCommandsByDevice(request *restful.Request, response *restful.Response
 
 	commands := []int64{}
 	if err := request.ReadEntity(&commands); err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse commands")
 		return
 	}
 
 	if err := gDB.UpdateCommandsForDevice(device.Id, commands); err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to update commands")
 		return
 	}
 }
@@ -146,31 +145,31 @@ func updateDeviceLocation(request *restful.Request, response *restful.Response) 
 
 	latitude, err := strconv.ParseFloat(request.QueryParameter("latitude"), 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse latitude")
 	}
 
 	longitude, err := strconv.ParseFloat(request.QueryParameter("longitude"), 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse longitude")
 	}
 
 	err = gDB.UpdateDeviceLocation(device, latitude, longitude)
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to update location")
 	}
 }
 
 func serveInvocation(request *restful.Request, response *restful.Response) {
 	token, err := strconv.ParseInt(request.PathParameter("token"), 10, 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse invocation")
 		return
 	}
 
 	// TODO check whether invocation was actually intended for device? how?
 	context, exists := gPendingCommands[token]
 	if !exists {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to find invocation")
 		return
 	}
 
@@ -186,7 +185,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 
 	cmdid, err := strconv.ParseInt(request.PathParameter("command-id"), 10, 64)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "Failed to parse command")
 		return
 	}
 
@@ -202,7 +201,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	}
 
 	if implements == false {
-		response.WriteError(http.StatusBadRequest, nil)
+		response.WriteErrorString(http.StatusBadRequest, "No such command for device")
 		return
 	}
 
@@ -212,7 +211,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	// Store pending arguments, if any
 	if request.Request.ContentLength != 0 {
 		if err = request.ReadEntity(&context.Arguments); err != nil {
-			response.WriteError(http.StatusBadRequest, nil)
+			response.WriteErrorString(http.StatusBadRequest, "Failed to parse arguments")
 			return
 		}
 	}
@@ -222,7 +221,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	body := fmt.Sprintf("version=%d", token)
 	pushRequest, err := http.NewRequest("PUT", device.Endpoint, strings.NewReader(body))
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to push command")
 		return
 	}
 
@@ -231,7 +230,7 @@ func triggerCommand(request *restful.Request, response *restful.Response) {
 	var client http.Client
 	_, err = client.Do(pushRequest)
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, nil)
+		response.WriteErrorString(http.StatusInternalServerError, "Failed to push command")
 	}
 }
 
