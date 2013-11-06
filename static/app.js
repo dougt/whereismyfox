@@ -74,7 +74,7 @@ $("document").ready(function(){
     $("#persona-logout").hide();
     $("#devices").hide();
 
-    function loggedIn(email){
+    function loggedIn(){
         $("#persona-login").hide();
         $("#persona-logout").show();
 
@@ -86,16 +86,17 @@ $("document").ready(function(){
         $("#persona-logout").hide();
         $("#persona-login").show();
         $("#devices").hide();
+        $.get('/auth/logout');
     }
 
     $("#persona-login").on("click", function(e) {
         e.preventDefault();
-        navigator.id.get(mailVerified, personaArguments);
+        navigator.id.request(personaArguments);
     });
 
     $("#persona-logout").on("click", function(e) {
         e.preventDefault();
-        $.get('/auth/logout', loggedOut);
+        navigator.id.logout();
     });
 
     function mailVerified(assertion){
@@ -104,7 +105,7 @@ $("document").ready(function(){
             url: '/auth/login',
             data: {assertion: assertion},
             success: function(res, status, xhr) {
-                loggedIn(JSON.parse(res).email);
+                loggedIn();
             },
             error: function(xhr, status, err) {
                 alert("Login failure: " + err);
@@ -112,12 +113,9 @@ $("document").ready(function(){
         });
     }
 
-    $.get('/auth/check', function (res) {
-        if (res === "") {
-            loggedOut();
-        } else {
-            loggedIn(res);
-        }
+    navigator.id.watch({
+      onlogin: mailVerified,
+      onlogout: loggedOut
     });
 
     // Use jQuery's delegation capability to monitor all button clicks, even in
