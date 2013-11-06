@@ -303,12 +303,6 @@ func createDeviceWebService() *restful.WebService {
 
 func setupPersonaHandlers() {
 	gPersona = NewPersonaHandler(gServerConfig.PersonaName, gServerConfig.SessionCookie)
-	http.HandleFunc("/auth/check", func(w http.ResponseWriter, r *http.Request) {
-		if gPersona.IsLoggedIn(r) {
-			w.Write([]byte("ok"))
-			return
-		}
-	})
 	http.HandleFunc("/auth/login", makePersonaLoginHandler("https://verifier.login.persona.org/verify"))
 	http.HandleFunc("/auth/applogin", makePersonaLoginHandler("https://firefoxos.persona.org/verify"))
 	http.HandleFunc("/auth/logout", gPersona.Logout)
