@@ -1,0 +1,43 @@
+<html>
+  <head>
+    <title>WhereIsMyFox Firefox Accounts Login</title>
+    <script src="https://login.persona.org/include.js"></script>
+  </head>
+  <body>
+    <script>
+      var fxaReady = false, pendingRequest = false;
+
+      navigator.mozId.watch({
+        wantIssuer: 'firefox-accounts',
+        onlogin: function wimf_fxa_onlogin(assertion) {
+          console.log('got assertion ' + assertion);
+          window.parent.postMessage({assertion: assertion}, 'app://settings.gaiamobile.org');
+        },
+        onlogout: function wimf_fxa_onlogout() {
+          window.parent.postMessage('logout', 'app://settings.gaiamobile.org');
+        },
+        onready: function wimf_fxa_onready() {
+          window.parent.postMessage('ready', 'app://settings.gaiamobile.org');
+
+          fxaReady = true;
+          if (pendingRequest) {
+            request();
+          }
+        }
+      });
+
+      window.addEventListener('message', function(event) {
+        if (event.origin != 'app://settings.gaiamobile.org') {
+          return;
+        }
+
+        if (!fxaReady) {
+          pendingRequest = true;
+          return;
+        }
+
+        navigator.mozId.request({});
+      });
+    </script>
+  </body>
+</html>
