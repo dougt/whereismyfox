@@ -5,10 +5,38 @@
   </head>
   <body>
     <script>
-      navigator.id.get(function(assertion) {
-        window.parent.postMessage(assertion, "*");
+      var ready = false, pendingRequest = false;
+
+      navigator.id.watch({
+        onlogin: function wimf_persona_onlogin(assertion) {
+          console.log('got assertion ' + assertion);
+          window.parent.postMessage(assertion, 'app://settings.gaiamobile.org');
+        },
+        onlogout: function wimf_persona_onlogout() {
+          window.parent.postMessage('logout', 'app://settings.gaiamobile.org');
+        },
+        onready: function wimf_persona_onready() {
+          window.parent.postMessage('ready', 'app://settings.gaiamobile.org');
+
+          ready = true;
+          if (pendingRequest) {
+            navigator.id.request({});
+          }
+        }
+      });
+
+      window.addEventListener('message', function(event) {
+        if (event.origin != 'app://settings.gaiamobile.org') {
+          return;
+        }
+
+        if (!ready) {
+          pendingRequest = true;
+          return;
+        }
+
+        navigator.id.request({});
       });
     </script>
   </body>
 </html>
-
